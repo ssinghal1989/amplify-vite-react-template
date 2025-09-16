@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { AppProvider, useAppContext, UserData } from './context/AppContext';
+import { AppProvider, useAppContext, useHasCompleteProfile, UserData } from './context/AppContext';
 import { Layout } from './components/Layout';
 import { HomePage } from './components/HomePage';
 import { Tier1Assessment } from './components/Tier1Assessment';
@@ -9,11 +9,29 @@ import { LoginPage } from './components/LoginPage';
 import { OtpVerificationPage } from './components/OtpVerificationPage';
 import { EmailLoginModal } from './components/EmailLoginModal';
 import { Tier1Results } from './components/Tier1Results';
+import { getCurrentUser, signOut } from 'aws-amplify/auth';
+import { useSetUserData } from './hooks/setUserData';
 
 function AppContent() {
   const { state, dispatch } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
+  const hasCompleteProfile = useHasCompleteProfile();
+  const { setUserData } = useSetUserData();
+
+
+  const checkIfUserAlreadyLoggedIn = async () => {
+    const currentUser = await getCurrentUser();
+
+    if (currentUser) {
+      dispatch({ type: 'SET_LOGGED_IN_USER_DETAILS', payload: currentUser });
+      setUserData({ loggedInUserDetails: currentUser! });
+    }
+  }
+
+  useEffect(() => {
+    checkIfUserAlreadyLoggedIn();
+  }, []);
 
   const getCurrentView = (): 'home' | 'tier1' | 'tier2' => {
     const path = location.pathname;
@@ -35,24 +53,32 @@ function AppContent() {
   };
 
   const handleLogin = (data: UserData) => {
-    dispatch({ type: 'SET_PENDING_USER_DATA', payload: data });
     navigate('/otp');
   };
 
   const handleOtpVerification = () => {
-    if (state.pendingUserData) {
-      dispatch({ type: 'SET_USER_DATA', payload: state.pendingUserData });
-      dispatch({ type: 'SET_PENDING_USER_DATA', payload: null });
+    dispatch({ type: 'SET_LOGIN_EMAIL', payload: '' });
+    if (state.redirectPathAfterLogin?.includes('tier1')) {
+      // Handle to redirect on result page
       navigate('/tier1-results');
+    } else if (state.redirectPathAfterLogin?.includes('tier2')) {
+      // Handle to redirect on result page
+      navigate('/tier2-results');
+    } else {
+      navigate('/');
     }
+    dispatch({ type: 'SET_REDIRECT_PATH_AFTER_LOGIN', payload: undefined });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     dispatch({ type: 'RESET_STATE' });
     navigate('/');
   };
 
   const handleHeaderLogin = () => {
+    // get the current path to redirect after login
+    dispatch({ type: 'SET_REDIRECT_PATH_AFTER_LOGIN', payload: location.pathname });
     navigate('/email-login');
   };
 
@@ -62,17 +88,9 @@ function AppContent() {
   };
 
   const handleLoginOtpVerification = () => {
-    dispatch({ 
-      type: 'SET_USER_DATA', 
-      payload: {
-        name: 'User',
-        email: state.loginEmail,
-        companyName: '',
-        jobTitle: ''
-      }
-    });
     dispatch({ type: 'SET_LOGIN_EMAIL', payload: '' });
-    navigate('/');
+    navigate(state.redirectPathAfterLogin || '/');
+    dispatch({ type: 'SET_REDIRECT_PATH_AFTER_LOGIN', payload: undefined });
   };
 
   const handleScheduleCall = () => {
@@ -85,13 +103,19 @@ function AppContent() {
   };
 
   const handleTier1Complete = (responses: Record<string, string>) => {
+    console.log("Tier 1 assessment completed with responses:", responses);
     dispatch({ type: 'SET_TIER1_RESPONSES', payload: responses });
     // Calculate score based on responses (simplified calculation)
     const score = Math.floor(Math.random() * 40) + 60; // Demo: random score between 60-100
     dispatch({ type: 'SET_TIER1_SCORE', payload: score });
-    navigate('/login');
+    if (hasCompleteProfile) {
+      navigate('/tier1-results');
+    } else {
+      navigate('/login');
+    }
   };
 
+  console.log('App State:', state);
   return (
     <Layout
       currentView={getCurrentView()}
@@ -101,16 +125,14 @@ function AppContent() {
       onNavigateToTier={navigateToTier}
       onLogin={handleHeaderLogin}
       onLogout={handleLogout}
-      userName={state.userData?.name}
+      userName={state.userData?.name || state.userData?.email || ''}
     >
       <Routes>
         <Route path="/" element={<HomePage onNavigateToTier={navigateToTier} />} />
         <Route 
           path="/tier1" 
           element={
-            <Tier1Assessment 
-              onNavigateToTier={navigateToTier} 
-              onShowLogin={() => navigate('/login')}
+            <Tier1Assessment
               onComplete={handleTier1Complete}
             />
           } 
@@ -137,7 +159,7 @@ function AppContent() {
           path="/otp" 
           element={
             <OtpVerificationPage 
-              userEmail={state.pendingUserData?.email || ''} 
+              userEmail={state.loginEmail} 
               onVerify={handleOtpVerification} 
               onCancel={() => navigate('/login')} 
             />
@@ -157,12 +179,15 @@ function AppContent() {
         <Route 
           path="/email-login" 
           element={
-            <EmailLoginModal 
-              onSubmit={handleEmailSubmit} 
-              onCancel={() => navigate('/')} 
+            <EmailLoginModal
+              onCancel={() => {
+                navigate(`${state.redirectPathAfterLogin}` || '/');
+                dispatch({ type: 'SET_REDIRECT_PATH_AFTER_LOGIN', payload: undefined });
+              }} 
             />
           } 
         />
+        {/* OTP verification route for direct login flow */}
         <Route 
           path="/otp-login" 
           element={

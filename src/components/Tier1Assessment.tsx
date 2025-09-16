@@ -3,12 +3,10 @@ import { ChevronLeft, ChevronRight, CheckCircle, TrendingUp, Home } from 'lucide
 import { assessmentData } from '../data/assessmentData';
 
 interface Tier1AssessmentProps {
-  onNavigateToTier: (tier: 'tier1' | 'tier2') => void;
-  onShowLogin: () => void;
   onComplete: (responses: Record<string, string>) => void;
 }
 
-export function Tier1Assessment({ onNavigateToTier, onShowLogin, onComplete }: Tier1AssessmentProps) {
+export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
   const [selectedCells, setSelectedCells] = useState<{[key: string]: boolean}>({});
 
   const { focusAreas, maturityLevels, gridData } = assessmentData;

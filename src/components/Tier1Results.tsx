@@ -175,15 +175,15 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
             >
               <Calendar className="w-5 h-5" />
               <span>Set up a Call to Discuss</span>
-            </button> */}
+            </button>
 
-            {/* <button
+            <button
               onClick={onNavigateToTier2}
               className="flex items-center justify-center space-x-2 text-white py-4 px-6 rounded-xl font-semibold hover:opacity-90 hover:shadow-lg transition-all duration-200"
               style={{ backgroundColor: '#05f' }}
             >
               <TrendingUp className="w-5 h-5" />
-              <span>Request Tier 2 Assessment</span>
+              <span>Begin Tier 2 Assessment</span>
             </button> */}
 
             <button
@@ -205,7 +205,6 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
         </div>
       </div>
 
-      
       <style jsx>{`
         @keyframes drawCircle {
           from {

@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, Mail, Building, Briefcase, ArrowRight } from 'lucide-react';
-import { UserData } from '../context/AppContext';
+import { LOGIN_NEXT_STEP, useAppContext, UserData } from '../context/AppContext';
+import { getCompanyNameFromDomain } from '../utils/common';
+import { client } from '../amplifyClient';
+import { useNavigate } from 'react-router-dom';
+import { useAuthFlow } from '../hooks/useAuthFlow';
 
 interface LoginPageProps {
   onLogin: (userData: UserData) => void;
@@ -8,14 +12,25 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin, onCancel }: LoginPageProps) {
+  const navigate = useNavigate();
+  const { state, dispatch } = useAppContext();
   const [formData, setFormData] = useState<UserData>({
-    name: '',
-    email: '',
-    companyName: '',
-    jobTitle: ''
+    name: state.userData?.name || state.userFormData?.name || '',
+    email: state.userData?.email || state.userFormData?.email || '',
+    companyName:  state.company?.name || state.userFormData?.companyName || getCompanyNameFromDomain(state.company?.primaryDomain!) || '',
+    jobTitle: state.userData?.jobTitle || state.userFormData?.jobTitle || ''
   });
+  const isUserLoggedIn = !!state.loggedInUserDetails?.signInDetails?.loginId;
 
   const [errors, setErrors] = useState<Partial<UserData>>({});
+
+  const updateStateAndNavigateToOtp = (nextStep: LOGIN_NEXT_STEP) => {
+    dispatch({ type: 'LOGIN_NEXT_STEP', payload: nextStep });
+    dispatch({ type: 'SET_LOGIN_EMAIL', payload: formData.email });
+    navigate('/otp-login');
+  }
+
+  const { handleAuth } = useAuthFlow(updateStateAndNavigateToOtp);
 
   const handleInputChange = (field: keyof UserData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -50,10 +65,41 @@ export function LoginPage({ onLogin, onCancel }: LoginPageProps) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLoggedInUser = async () => {
+     // Check if company name available in database if not update it
+    if (state.company && !state.company?.name) {
+      const {data: updatedCompany} = await client.models.Company.update({
+        id: state.company?.id,
+        name: formData.companyName,
+      });
+      console.log('Updated Company:', updatedCompany);
+      dispatch({ type: 'SET_COMPANY_DATA', payload: updatedCompany });
+    }
+    if (state?.userData) {
+      const {data: updatedUser} = await client.models.User.update({
+        id: state?.userData?.id,
+        name: formData.name,
+        jobTitle: formData.jobTitle,
+      });
+      console.log('Updated User:', updatedUser);
+      dispatch({ type: 'SET_USER_DATA', payload: updatedUser });
+    }
+    navigate('/tier1-results');
+  }
+
+  const handleNewUser = async () => {
+    dispatch({ type: 'SET_USER_FORM_DATA', payload: formData });
+    await handleAuth(formData.email);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onLogin(formData);
+      if (isUserLoggedIn) {
+        handleLoggedInUser();
+      } else {
+        handleNewUser();
+      }
     }
   };
 
@@ -98,6 +144,7 @@ export function LoginPage({ onLogin, onCancel }: LoginPageProps) {
               <input
                 type="email"
                 id="email"
+                disabled={isUserLoggedIn}
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 className={`block w-full pl-10 pr-3 py-3 border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${

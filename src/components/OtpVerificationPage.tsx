@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, ArrowRight, RefreshCw } from 'lucide-react';
+import { useAppContext } from '../context/AppContext';
+import { AuthUser, confirmSignIn, confirmSignUp, getCurrentUser, resendSignUpCode, signIn } from 'aws-amplify/auth';
+import { useSetUserData } from '../hooks/setUserData';
 
 interface OtpVerificationPageProps {
   userEmail: string;
-  onVerify: () => void;
   onCancel: () => void;
+  onVerify: () => void;
 }
 
-export function OtpVerificationPage({ userEmail, onVerify, onCancel }: OtpVerificationPageProps) {
+export function OtpVerificationPage({ userEmail, onCancel, onVerify }: OtpVerificationPageProps) {
   const [otp, setOtp] = useState('');
+  const [error, setError] = useState('');
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const { state, dispatch } = useAppContext();
+  const otpLenght = state.loginNextStep === 'CONFIRM_SIGNIN' ? 8 : 6;
+  const { setUserData } = useSetUserData();
 
   useEffect(() => {
     if (countdown > 0) {
@@ -21,32 +28,62 @@ export function OtpVerificationPage({ userEmail, onVerify, onCancel }: OtpVerifi
       setCanResend(true);
     }
   }, [countdown]);
+  
 
   const handleOtpChange = (value: string) => {
     // Only allow numbers and limit to 6 digits
-    const numericValue = value.replace(/\D/g, '').slice(0, 6);
+    const numericValue = value.replace(/\D/g, '').slice(0, otpLenght);
     setOtp(numericValue);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length === 6) {
-      // Simulate OTP verification - in real app, this would call an API
-      onVerify();
+    setError('');
+    if (otp.length === otpLenght) {
+      try {
+        let currentUser: AuthUser | null = null;
+        if (state.loginNextStep === 'CONFIRM_SIGNUP') {
+          await confirmSignUp({confirmationCode: otp, username: state.loginEmail})
+          await signIn({ username: state.loginEmail, password: 'Temp@123' });
+          currentUser = await getCurrentUser();
+        } else {
+          await confirmSignIn({challengeResponse: otp});
+          currentUser = await getCurrentUser();
+        }
+        const result = await setUserData({
+          loggedInUserDetails: currentUser!,
+          companyName: state.userFormData?.companyName || '',
+          userJobTitle: state.userFormData?.jobTitle || '',
+          userFullName: state.userFormData?.name || ''
+        });
+        console.log('User data set result:', result);
+        dispatch({ type: 'SET_LOGGED_IN_USER_DETAILS', payload: currentUser });
+        onVerify();
+      } catch(err) {
+        setError((err as any)?.message || 'Failed to verify code. Please try again.');
+      }
     }
   };
 
   const handleResendOtp = async () => {
     setIsResending(true);
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsResending(false);
-    setCountdown(60);
-    setCanResend(false);
+    try {
+      if (state.loginNextStep === 'CONFIRM_SIGNIN') {
+        await signIn({ username: state.loginEmail, options: { authFlowType: 'USER_AUTH', preferredChallenge: 'EMAIL_OTP' } });
+      } else {
+        await resendSignUpCode({ username: state.loginEmail });
+      }
+      setIsResending(false);
+      setCountdown(60);
+      setCanResend(false);
+    } catch (err) {
+      console.log('Error:', err);
+    }
     setOtp('');
   };
 
-  const isOtpValid = otp.length === 6;
+  const isOtpValid = otp.length === otpLenght;
 
   return (
     <div className="flex-1 flex items-center justify-center p-6">
@@ -57,7 +94,7 @@ export function OtpVerificationPage({ userEmail, onVerify, onCancel }: OtpVerifi
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Verify Your Email</h1>
           <p className="text-gray-600">
-            We've sent a 6-digit verification code to
+            We've sent a {otpLenght}-digit verification code to
           </p>
           <p className="text-gray-900 font-medium mt-1">{userEmail}</p>
         </div>
@@ -74,12 +111,14 @@ export function OtpVerificationPage({ userEmail, onVerify, onCancel }: OtpVerifi
               value={otp}
               onChange={(e) => handleOtpChange(e.target.value)}
               className="block w-full px-4 py-4 text-center text-2xl font-mono border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 tracking-widest"
-              placeholder="000000"
-              maxLength={6}
+              placeholder={otpLenght === 6 ? "000000" : "00000000"}
+              maxLength={otpLenght}
             />
             <p className="mt-2 text-sm text-gray-500 text-center">
-              Enter the 6-digit code sent to your email
+              Enter the {otpLenght}-digit code sent to your email
             </p>
+
+            {error && <p className="mt-2 text-sm text-red-600 text-center">{error}</p>}
           </div>
 
           {/* Verify Button */}
@@ -92,7 +131,7 @@ export function OtpVerificationPage({ userEmail, onVerify, onCancel }: OtpVerifi
                 : 'text-gray-400 bg-gray-100 cursor-not-allowed'
             }`}
           >
-            <span>Verify & See Results</span>
+            <span>{state.loginFlow === 'VIA_ASSESSMENT' ? 'Verify & See Results' : 'Verify'}</span>
             <ArrowRight className="w-5 h-5" />
           </button>
 
@@ -130,7 +169,7 @@ export function OtpVerificationPage({ userEmail, onVerify, onCancel }: OtpVerifi
             onClick={onCancel}
             className="w-full py-3 px-6 rounded-xl font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 transition-all duration-200"
           >
-            Back to User Information
+            Back
           </button>
         </form>
 

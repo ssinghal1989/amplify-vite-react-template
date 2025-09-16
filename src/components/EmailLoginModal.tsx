@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { Mail, ArrowRight, X } from 'lucide-react';
+import { LOGIN_NEXT_STEP, useAppContext } from '../context/AppContext';
+import { useNavigate } from 'react-router-dom';
+import { useAuthFlow } from '../hooks/useAuthFlow';
 
 interface EmailLoginModalProps {
-  onSubmit: (email: string) => void;
   onCancel: () => void;
 }
 
-export function EmailLoginModal({ onSubmit, onCancel }: EmailLoginModalProps) {
+export function EmailLoginModal({ onCancel }: EmailLoginModalProps) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const { dispatch } = useAppContext();
+  const navigate = useNavigate();
 
   const handleInputChange = (value: string) => {
     setEmail(value);
@@ -21,7 +25,16 @@ export function EmailLoginModal({ onSubmit, onCancel }: EmailLoginModalProps) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const updateStateAndNavigateToOtp = (nextStep: LOGIN_NEXT_STEP) => {
+    dispatch({ type: 'LOGIN_NEXT_STEP', payload: nextStep });
+    dispatch({ type: 'SET_LOGIN_EMAIL', payload: email });
+    dispatch({ type: 'SET_LOGIN_FLOW', payload: 'DIRECT' });
+    navigate('/otp-login');
+  }
+
+  const { handleAuth } = useAuthFlow(updateStateAndNavigateToOtp);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email.trim()) {
@@ -33,8 +46,7 @@ export function EmailLoginModal({ onSubmit, onCancel }: EmailLoginModalProps) {
       setError('Please enter a valid email address');
       return;
     }
-
-    onSubmit(email);
+    await handleAuth(email);
   };
 
   const isEmailValid = email.trim() !== '' && validateEmail(email);
@@ -100,7 +112,7 @@ export function EmailLoginModal({ onSubmit, onCancel }: EmailLoginModalProps) {
 
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
-            We'll send a 6-digit verification code to your email
+            We'll send a verification code to your email
           </p>
         </div>
       </div>

@@ -23,12 +23,12 @@ export function Tier2Assessment({ onNavigateToTier, onShowLogin }: Tier2Assessme
             <p className="text-black mb-6">
               Coming soon: Comprehensive diagnostic workshop for strategic planning
             </p>
-            {/* <button 
+            <button 
               onClick={onShowLogin}
               className="px-8 py-3 bg-primary text-white rounded-lg font-medium transition-all duration-200 hover:opacity-90"
             >
               Complete Assessment
-            </button> */}
+            </button>
           </div>
         </div>
       </div>
