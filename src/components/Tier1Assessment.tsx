@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, CheckCircle, TrendingUp, Home } from 'lucide-react';
-import { assessmentData } from '../data/assessmentData';
+
+
+interface AssessmentData {
+  focusAreas: string[];
+  maturityLevels: string[];
+  gridData: Record<string, Record<string, string>>;
+}
 
 interface Tier1AssessmentProps {
+  assessmentData: AssessmentData;
   onComplete: (responses: Record<string, string>) => void;
 }
 
-export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
+export function Tier1Assessment({ assessmentData, onComplete }: Tier1AssessmentProps) {
   const [selectedCells, setSelectedCells] = useState<{[key: string]: boolean}>({});
 
   const { focusAreas, maturityLevels, gridData } = assessmentData;

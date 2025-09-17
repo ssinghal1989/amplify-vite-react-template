@@ -205,7 +205,7 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes drawCircle {
           from {
             stroke-dashoffset: ${circumference};

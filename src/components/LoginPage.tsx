@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { User, Mail, Building, Briefcase, ArrowRight } from 'lucide-react';
 import { LOGIN_NEXT_STEP, useAppContext, UserData } from '../context/AppContext';
-import { getCompanyNameFromDomain } from '../utils/common';
+import { getCompanyNameFromDomain, getDomainFromEmail } from '../utils/common';
 import { client } from '../amplifyClient';
 import { useNavigate } from 'react-router-dom';
 import { useAuthFlow } from '../hooks/useAuthFlow';
+import { ifDomainAlloeded } from '../utils/domain';
 
 interface LoginPageProps {
   onLogin: (userData: UserData) => void;
@@ -53,6 +54,10 @@ export function LoginPage({ onLogin, onCancel }: LoginPageProps) {
       newErrors.email = 'Please enter a valid email address';
     }
 
+    if (!ifDomainAlloeded(getDomainFromEmail(formData.email)!)) {
+      newErrors.email = 'Please use your work email address';
+    }
+
     if (!formData.companyName.trim()) {
       newErrors.companyName = 'Company name is required';
     }
@@ -72,7 +77,6 @@ export function LoginPage({ onLogin, onCancel }: LoginPageProps) {
         id: state.company?.id,
         name: formData.companyName,
       });
-      console.log('Updated Company:', updatedCompany);
       dispatch({ type: 'SET_COMPANY_DATA', payload: updatedCompany });
     }
     if (state?.userData) {
@@ -81,7 +85,6 @@ export function LoginPage({ onLogin, onCancel }: LoginPageProps) {
         name: formData.name,
         jobTitle: formData.jobTitle,
       });
-      console.log('Updated User:', updatedUser);
       dispatch({ type: 'SET_USER_DATA', payload: updatedUser });
     }
     navigate('/tier1-results');
@@ -104,7 +107,6 @@ export function LoginPage({ onLogin, onCancel }: LoginPageProps) {
   };
 
   const isFormValid = Object.values(formData).every(value => value.trim() !== '');
-
   return (
     <div className="flex-1 flex items-center justify-center p-6">
       <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">

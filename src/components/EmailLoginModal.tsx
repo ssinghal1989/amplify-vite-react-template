@@ -3,6 +3,8 @@ import { Mail, ArrowRight, X } from 'lucide-react';
 import { LOGIN_NEXT_STEP, useAppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuthFlow } from '../hooks/useAuthFlow';
+import { ifDomainAlloeded } from '../utils/domain';
+import { getDomainFromEmail } from '../utils/common';
 
 interface EmailLoginModalProps {
   onCancel: () => void;
@@ -44,6 +46,11 @@ export function EmailLoginModal({ onCancel }: EmailLoginModalProps) {
 
     if (!validateEmail(email)) {
       setError('Please enter a valid email address');
+      return;
+    }
+
+    if (!ifDomainAlloeded(getDomainFromEmail(email)!)) {
+      setError('Please use your work email address');
       return;
     }
     await handleAuth(email);
