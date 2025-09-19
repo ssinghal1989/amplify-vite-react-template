@@ -137,11 +137,6 @@ function AppContent() {
     navigate("/email-login");
   };
 
-  const handleEmailSubmit = (email: string) => {
-    dispatch({ type: "SET_LOGIN_EMAIL", payload: email });
-    navigate("/otp-login");
-  };
-
   const handleLoginOtpVerification = () => {
     dispatch({ type: "SET_LOGIN_EMAIL", payload: "" });
     navigate(state.redirectPathAfterLogin || "/");

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthFlow } from '../hooks/useAuthFlow';
 import { ifDomainAlloeded } from '../utils/domain';
 import { getDomainFromEmail } from '../utils/common';
+import { LoadingButton } from './ui/LoadingButton';
 
 interface EmailLoginModalProps {
   onCancel: () => void;
@@ -34,7 +35,7 @@ export function EmailLoginModal({ onCancel }: EmailLoginModalProps) {
     navigate('/otp-login');
   }
 
-  const { handleAuth } = useAuthFlow(updateStateAndNavigateToOtp);
+  const { handleAuth, loading } = useAuthFlow(updateStateAndNavigateToOtp);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,19 +103,12 @@ export function EmailLoginModal({ onCancel }: EmailLoginModalProps) {
             {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
           </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={!isEmailValid}
-            className={`w-full py-4 px-6 rounded-xl font-semibold flex items-center justify-center space-x-2 transition-all duration-200 ${
-              isEmailValid
-                ? 'bg-primary text-white hover:opacity-90 hover:shadow-lg transform hover:-translate-y-0.5'
-                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-            }`}
-          >
-            <span>Send Verification Code</span>
-            <ArrowRight className="w-5 h-5" />
-          </button>
+          <LoadingButton disabled={!isEmailValid} loadingText='Sending Verification Code ...' loading={loading} style={{width: '100%'}} >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+              Send Verification Code
+              <ArrowRight className="w-5 h-5" />
+            </div>
+          </LoadingButton>
         </form>
 
         <div className="mt-6 text-center">

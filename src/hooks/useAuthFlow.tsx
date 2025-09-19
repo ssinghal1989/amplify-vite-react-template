@@ -13,24 +13,26 @@ export function useAuthFlow(
 ) {
   // State to store any authentication error messages
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Handles the authentication logic for a given email
   const handleAuth = useCallback(
     async (email: string) => {
+      setLoading(true);
       const userExists = await checkIfUserExists(email);
       if (!userExists) {
         try {
           // Attempt to sign up the user as it seems they don't exist
-          const signUpResponse = await signUp({
+        await signUp({
             username: email,
             password: "Temp@123",
             options: { userAttributes: { email } },
           });
-          console.log("Sign-up response:", signUpResponse);
           updateStateAndNavigateToOtp("CONFIRM_SIGNUP");
         } catch (signupErr: any) {
           setError(signupErr.message);
         }
+        setLoading(false);
         return;
       }
       try {
@@ -44,8 +46,6 @@ export function useAuthFlow(
         });
 
         const { isSignedIn, nextStep } = signedInResponse;
-
-        console.log("Sign-in response:", signedInResponse);
         // If not signed in and next step is to confirm sign in with email code
         if (
           !isSignedIn &&
@@ -59,26 +59,27 @@ export function useAuthFlow(
         ) {
           try {
             // Attempt to sign up the user as it seems they don't exist
-            const signUpResponse = await signUp({
+            await signUp({
               username: email,
               password: "Temp@123",
               options: { userAttributes: { email } },
             });
-            console.log("Sign-up response:", signUpResponse);
             updateStateAndNavigateToOtp("CONFIRM_SIGNUP");
           } catch (signupErr: any) {
             setError(signupErr.message);
           }
         }
+        setLoading(false);
       } catch (err: any) {
         // Handle and store any errors during sign in or sign up
         console.error(err);
         setError(err.message);
+        setLoading(false);
       }
     },
     [updateStateAndNavigateToOtp]
   );
 
   // Return the authentication handler and error state
-  return { handleAuth, error };
+  return { handleAuth, error, loading };
 }
