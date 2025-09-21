@@ -45,7 +45,7 @@ export const schema = a.schema({
         gridData: a.json().required(),
       })
     )
-    .authorization((allow) => [allow.authenticated(), allow.publicApiKey()])
+    .authorization((allow) => [allow.publicApiKey()])
     .handler(
       a.handler.custom({
         entry: "./get-assesment-data.js",

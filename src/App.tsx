@@ -41,13 +41,23 @@ function AppContent() {
   );
 
   const checkIfUserAlreadyLoggedIn = async () => {
-    const currentUser = await getCurrentUser();
+    try {
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        dispatch({ type: "SET_LOGGED_IN_USER_DETAILS", payload: currentUser });
+        setUserData({ loggedInUserDetails: currentUser! });
+      }
+    } catch (error) {
+      console.error("Error checking if user is logged in:", error);
+    }
+  };
 
-    if (currentUser) {
-      dispatch({ type: "SET_LOGGED_IN_USER_DETAILS", payload: currentUser });
-      setUserData({ loggedInUserDetails: currentUser! });
 
-      const { data } = await client.queries.getAssessmentData();
+  const fetchTier1Assessment = async () => {
+    try {
+      const { data } = await client.queries.getAssessmentData({
+        authMode: "apiKey",
+      });
 
       if (data && data.focusAreas && data.maturityLevels && data.gridData) {
         setAssessmentData({
@@ -56,32 +66,13 @@ function AppContent() {
           gridData: JSON.parse(JSON.parse(data.gridData as unknown as string)),
         } as AssessmentData);
       }
-    }
-  };
-
-  const fetchTier1Assessment = async () => {
-    const { data, errors } = await client.queries.getAssessmentData({
-      authMode: "userPool",
-    });
-    console.log("Fetched assessment data:", data);
-    console.log("Errors fetching assessment data:", errors);
-
-    if (data && data.focusAreas && data.maturityLevels && data.gridData) {
-      setAssessmentData({
-        focusAreas: data.focusAreas,
-        maturityLevels: data.maturityLevels,
-        gridData: JSON.parse(JSON.parse(data.gridData as unknown as string)),
-      } as AssessmentData);
+    } catch (error) {
+      console.error("Error fetching Tier 1 assessment data:", error);
     }
   };
 
   useEffect(() => {
-    if (state.loggedInUserDetails?.signInDetails?.loginId) {
-      fetchTier1Assessment();
-    }
-  }, [state.loggedInUserDetails?.signInDetails?.loginId]);
-
-  useEffect(() => {
+    fetchTier1Assessment();
     checkIfUserAlreadyLoggedIn();
   }, []);
 
