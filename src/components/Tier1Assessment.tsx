@@ -1,87 +1,275 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, CheckCircle, TrendingUp, Home } from 'lucide-react';
-
-
-interface AssessmentData {
-  focusAreas: string[];
-  maturityLevels: string[];
-  gridData: Record<string, Record<string, string>>;
-}
+import {
+  BarChart3,
+  Calendar,
+  TrendingUp
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useAssessment } from "../hooks/useAssesment";
+import { useLoader } from "../hooks/useLoader";
+import { Tier1TemplateId } from "../services/defaultQuestions";
+import { questionsService } from "../services/questionsService";
+import { calculateTier1Score } from "../utils/scoreCalculator";
+import { Loader } from "./ui/Loader";
+import { LoadingButton } from "./ui/LoadingButton";
 
 interface Tier1AssessmentProps {
-  assessmentData: AssessmentData;
   onComplete: (responses: Record<string, string>) => void;
 }
 
-export function Tier1Assessment({ assessmentData, onComplete }: Tier1AssessmentProps) {
-  const [selectedCells, setSelectedCells] = useState<{[key: string]: boolean}>({});
+const maturityOrder = ["BASIC", "EMERGING", "ESTABLISHED", "WORLD_CLASS"];
 
-  const { focusAreas, maturityLevels, gridData } = assessmentData;
+export function Tier1Assessment({
+  onComplete,
+}: Tier1AssessmentProps) {
+  const { isLoading: questionsLoading, withLoading: withQuestionsLoading } =
+    useLoader();
 
-  const handleCellClick = (focusArea: string, level: string) => {
-    const cellKey = `${focusArea}-${level}`;
-    setSelectedCells(prev => {
-      const newSelected = { ...prev };
-      
-      // Clear other selections in the same row
-      maturityLevels.forEach(matLevel => {
-        const key = `${focusArea}-${matLevel}`;
-        if (key !== cellKey) {
-          delete newSelected[key];
-        }
-      });
-      
-      // Toggle current selection
-      if (newSelected[cellKey]) {
-        delete newSelected[cellKey];
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [selectedResponses, setSelectedResponses] = useState<
+    Record<string, string>
+  >({});
+  const {
+    userTier1Assessments,
+    updateTier1AssessmentResponse,
+    submittingAssesment,
+  } = useAssessment();
+
+  // Load questions from database on component mount
+  useEffect(() => {
+    loadQuestionsFromDatabase();
+  }, []);
+
+  const loadQuestionsFromDatabase = async () => {
+    await withQuestionsLoading(async () => {
+      // Load questions for Tier 1 template
+      const result = await questionsService.getQuestionsByTemplate(
+        Tier1TemplateId
+      );
+      if (result.success && result.data) {
+        // Sort questions by order
+        const sortedQuestions = result.data.sort((a, b) => a.order - b.order);
+        setQuestions(sortedQuestions);
       } else {
-        newSelected[cellKey] = true;
+        console.error("Failed to load questions from database:", result.error);
+        throw new Error("Failed to load assessment questions");
       }
-      
-      return newSelected;
     });
   };
-
-  const isAllAnswered = focusAreas.every(area => 
-    maturityLevels.some(level => selectedCells[`${area}-${level}`])
+  const maturityLevels =
+    questions.length > 0 && questions[0].options
+      ? maturityOrder.filter((level) =>
+          questions[0].options.some((opt: any) => opt.value === level)
+        )
+      : [];
+  const maturityLabels = maturityLevels.map((level) =>
+    level
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (l) => l.toUpperCase())
   );
 
+  const handleOptionSelect = (question: any, optionValue: string) => {
+    setSelectedResponses((prev) => ({
+      ...prev,
+      [question.id]: optionValue,
+    }));
+  };
+
+  const isAllAnswered = questions.every(
+    (question) => selectedResponses[question.id] !== undefined
+  );
+
+  const ifDataChanged =
+    userTier1Assessments && userTier1Assessments.length > 0
+      ? JSON.stringify(selectedResponses) !==
+        JSON.stringify(JSON.parse(userTier1Assessments[0]?.responses || "{}"))
+      : true;
+
   const handleSubmit = () => {
-    if (isAllAnswered) {
-      // Convert selected cells to responses format
-      const responses: Record<string, string> = {};
-      focusAreas.forEach(area => {
-        const selectedLevel = maturityLevels.find(level => selectedCells[`${area}-${level}`]);
-        if (selectedLevel) {
-          responses[area] = selectedLevel;
-        }
-      });
-      onComplete(responses);
+    if (userTier1Assessments && userTier1Assessments.length > 0) {
+      updateAssessmentResponse();
+    } else {
+      // If no previous assessment, create a new one
+      onComplete(selectedResponses);
     }
   };
+
+  const updateAssessmentResponse = async () => {
+    try {
+      await updateTier1AssessmentResponse({
+        assessmentId: firstPreviousAssessment?.id || "",
+        updatedResponses: selectedResponses,
+        updatedScores: calculateTier1Score(selectedResponses),
+      });
+    } catch (error) {
+      console.error("Error in updating responses");
+    }
+  };
+
+  const getScoreColor = (score: number): string => {
+    if (score >= 85) return '#10b981'; // emerald-500 - World Class (green)
+    if (score >= 70) return '#3b82f6'; // blue-500 - Established (blue)
+    if (score >= 50) return '#f59e0b'; // amber-500 - Emerging (orange)
+    return '#ef4444'; // red-500 - Basic (red)
+  };
+
+  useEffect(() => {
+    if (userTier1Assessments && userTier1Assessments.length > 0) {
+      setSelectedResponses(
+        JSON.parse(userTier1Assessments[0]?.responses || "{}")
+      );
+    }
+  }, [userTier1Assessments]);
+
+  const getSortedOptions = (question: any) => {
+    const sortedOptions = question.options.sort((a: any, b: any) => {
+      const aIndex = maturityOrder.indexOf(a.value);
+      const bIndex = maturityOrder.indexOf(b.value);
+      return aIndex - bIndex;
+    });
+    return sortedOptions;
+  };
+
+  const firstPreviousAssessment =
+    userTier1Assessments && userTier1Assessments.length > 0
+      ? userTier1Assessments[0]
+      : null;
+
+  // Show loading state while questions are being loaded
+  if (questionsLoading) {
+    return (
+      <main className="flex-1 p-8">
+        <div className="max-w-none mx-8">
+          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
+            <Loader text="Loading assessment questions..." size="lg" />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Show error state if questions failed to load
+  if (questions.length === 0) {
+    return (
+      <main className="flex-1 p-8">
+        <div className="max-w-none mx-8">
+          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 text-center">
+            <div className="text-red-500 mb-4">
+              <TrendingUp className="w-12 h-12 mx-auto mb-2" />
+              <h3 className="text-lg font-semibold">
+                Failed to Load Assessment
+              </h3>
+              <p className="text-gray-600 mt-2">
+                Unable to load assessment questions from database
+              </p>
+            </div>
+            <button
+              onClick={loadQuestionsFromDatabase}
+              className="bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition-all duration-200"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1 p-8">
       <div className="max-w-none mx-8">
+        {/* Previous Assessment Results */}
+        {/* Previous Attempt Score Card */}
+        {!!firstPreviousAssessment && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 shadow-sm border border-blue-200 mb-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg"
+                  style={{
+                    backgroundColor: getScoreColor(
+                      JSON.parse(firstPreviousAssessment.score).overallScore
+                    ),
+                  }}
+                >
+                  {JSON.parse(firstPreviousAssessment.score).overallScore}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">
+                    Current Status:{" "}
+                    {JSON.parse(firstPreviousAssessment.score).maturityLevel}{" "}
+                    Level
+                  </h3>
+                  <div className="flex items-center space-x-4 text-sm text-gray-600">
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="w-4 h-4" />
+                      <span>
+                        Completed on{" "}
+                        {new Date(
+                          firstPreviousAssessment.createdAt
+                        ).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <BarChart3 className="w-4 h-4" />
+                      <span>
+                        {
+                          Object.keys(
+                            JSON.parse(firstPreviousAssessment.responses)
+                          ).length
+                        }{" "}
+                        questions answered
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* <button
+                //onClick={handleRetakeAssessment}
+                className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-sm"
+              >
+                <RotateCcw className="w-4 h-4 text-gray-600" />
+                <span className="text-gray-700 font-medium">Start Fresh</span>
+              </button> */}
+            </div>
+            <div className="mt-4 bg-white/60 rounded-lg p-3">
+              <p className="text-sm text-gray-700">
+                <strong>Your previous responses are pre-selected below.</strong>{" "}
+                You can modify any answers and resubmit to update your score.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Current Assessment */}
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-black mb-4">Albert Invent | Digital Readiness Assessment Tier 1</h2>
+            <h2 className="text-2xl font-bold text-black mb-4">
+              {/* {previousAssessments && previousAssessments.length > 0
+                ? "Take Assessment Again"
+                : "Albert Invent | Digital Readiness Assessment Tier 1 Assessment"} */}
+              Tier 1 Assessment
+            </h2>
             <p className="text-black mb-6">
-              Please click the cells that apply to your organization in the area below. Once you have selected all your responses, please click submit to continue.
+              Please click the cells that apply to your organization in the area
+              below. Once you have selected all your responses, please click
+              submit to continue.
             </p>
-            
+
             <div className="flex justify-end mb-6">
-              <button 
+              <LoadingButton
                 onClick={handleSubmit}
-                disabled={!isAllAnswered}
-                className={`px-8 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  isAllAnswered 
-                    ? 'bg-primary text-white hover:opacity-90' 
-                    : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                }`}
+                loading={submittingAssesment}
+                loadingText={
+                  firstPreviousAssessment ? "Updating..." : "Submitting..."
+                }
+                disabled={!isAllAnswered || !ifDataChanged}
+                size="md"
               >
-                Submit
-              </button>
+                {firstPreviousAssessment
+                  ? "Update Assessment"
+                  : "Submit Assessment"}
+              </LoadingButton>
             </div>
           </div>
 
@@ -90,33 +278,41 @@ export function Tier1Assessment({ assessmentData, onComplete }: Tier1AssessmentP
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="text-left p-4 font-semibold text-gray-700 border-b">Focus Areas</th>
-                  {maturityLevels.map(level => (
-                    <th key={level} className="text-center p-4 font-semibold text-gray-700 border-b min-w-48">
+                  <th className="text-left p-4 font-semibold text-gray-700 border-b">
+                    Focus Areas
+                  </th>
+                  {maturityLabels.map((level: any) => (
+                    <th
+                      key={level}
+                      className="text-center p-4 font-semibold text-gray-700 border-b min-w-48"
+                    >
                       {level}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {focusAreas.map(area => (
-                  <tr key={area} className="border-b border-gray-100">
+                {questions.map((question) => (
+                  <tr key={question.id} className="border-b border-gray-100">
                     <td className="p-4 font-medium text-gray-800 bg-gray-50 align-top">
-                      {area}
+                      {question.prompt}
                     </td>
-                    {maturityLevels.map(level => {
-                      const isSelected = selectedCells[`${area}-${level}`];
+                    {getSortedOptions(question).map((option: any) => {
+                      const isSelected =
+                        selectedResponses[question.id] === option.value;
                       return (
-                        <td key={level} className="p-2 align-top">
+                        <td key={option.id} className="p-2 align-top">
                           <div
-                            onClick={() => handleCellClick(area, level)}
+                            onClick={() =>
+                              handleOptionSelect(question, option.value)
+                            }
                             className={`p-3 rounded-lg cursor-pointer transition-all duration-200 text-sm leading-tight ${
-                              isSelected 
-                                ? 'text-white bg-blue-500' 
-                                : 'text-black hover:bg-gray-100'
+                              isSelected
+                                ? "text-white bg-blue-500"
+                                : "text-black hover:bg-gray-100"
                             }`}
                           >
-                            {gridData[area as keyof typeof gridData][level as keyof typeof gridData[keyof typeof gridData]]}
+                            {option.label}
                           </div>
                         </td>
                       );
@@ -125,6 +321,25 @@ export function Tier1Assessment({ assessmentData, onComplete }: Tier1AssessmentP
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Progress indicator */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Progress: {Object.keys(selectedResponses).length} of{" "}
+              {questions.length} questions answered
+            </p>
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div
+                className="bg-primary h-2 rounded-full transition-all duration-300"
+                style={{
+                  width: `${
+                    (Object.keys(selectedResponses).length / questions.length) *
+                    100
+                  }%`,
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>

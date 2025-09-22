@@ -14,6 +14,7 @@ export const schema = a.schema({
       //assessments: a.hasMany("AssessmentInstance", "companyId"),
       createdAt: a.datetime().default(new Date().toISOString()),
       updatedAt: a.datetime().default(new Date().toISOString()),
+      assessmentInstances: a.hasMany("AssessmentInstance", "companyId"),
     })
     .identifier(["id"])
     .authorization((allow) => [
@@ -32,6 +33,7 @@ export const schema = a.schema({
       company: a.belongsTo("Company", "companyId"),
       createdAt: a.datetime().default(new Date().toISOString()),
       updatedAt: a.datetime().default(new Date().toISOString()),
+      assessmentInstances: a.hasMany("AssessmentInstance", "initiatorUserId"),
     })
     .identifier(["id"])
     .authorization((allow) => [allow.authenticated()]),
@@ -51,6 +53,73 @@ export const schema = a.schema({
         entry: "./get-assesment-data.js",
       })
     ),
+  Question: a
+    .model({
+      templateId: a.id().required(),
+      sectionId: a.string().required(),
+      order: a.integer().required(),
+      kind: a.enum(["SINGLE_CHOICE", "MULTIPLE_CHOICE", "SCALE", "TEXT"]),
+      prompt: a.string().required(),
+      helpText: a.string(),
+      scale: a.json(),
+      required: a.boolean().default(true),
+      metadata: a.json(),
+      template: a.belongsTo("AssessmentTemplate", "templateId"),
+      options: a.hasMany("Option", "questionId"),
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
+  AssessmentTemplate: a
+    .model({
+      id: a.string().required(),
+      name: a.string().required(),
+      slug: a.string().required(),
+      version: a.string().required(),
+      tier: a.enum(["TIER1", "TIER2"]),
+      sections: a.json(),
+      scoringConfig: a.json(),
+      questions: a.hasMany("Question", "templateId"),
+      assessmentInstances: a.hasMany("AssessmentInstance", "templateId"),
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
+  // Question options
+  Option: a
+    .model({
+      questionId: a.id().required(),
+      label: a.string().required(),
+      value: a.string().required(),
+      score: a.float(),
+      question: a.belongsTo("Question", "questionId"),
+    })
+    .authorization((allow) => [allow.publicApiKey()]),
+  // Assessment instances (runs)
+  AssessmentInstance: a
+    .model({
+      id: a.id().required(),
+      templateId: a.id().required(),
+      companyId: a.id(),
+      initiatorUserId: a.id(),
+      assessmentType: a.enum(["TIER1", "TIER2"]),
+      //status: a.enum(['IN_PROGRESS', 'SUBMITTED', 'SCORED']).default('IN_PROGRESS'),
+      startedAt: a.datetime(),
+      submittedAt: a.datetime(),
+      scoredAt: a.datetime(),
+      metadata: a.json(),
+      template: a.belongsTo("AssessmentTemplate", "templateId"),
+      company: a.belongsTo("Company", "companyId"),
+      initiator: a.belongsTo("User", "initiatorUserId"),
+      score: a.json(),
+      responses: a.json(), // Storing responses as JSON for simplicity
+      createdAt: a.datetime().default(new Date().toISOString()),
+      updatedAt: a.datetime().default(new Date().toISOString()),
+      //relations
+      //assessor: a.belongsTo('User', 'assessorId'),
+      //responses: a.hasMany('Response', 'assessmentInstanceId'),
+      //scoreCard: a.hasOne('ScoreCard', 'assessmentInstanceId'),
+      //participants: a.hasMany('Participant', 'assessmentInstanceId'),
+      //workshopSessions: a.hasMany('WorkshopSession', 'assessmentInstanceId'),
+      //assets: a.hasMany('Asset', 'assessmentInstanceId'),
+    })
+    .authorization((allow) => [allow.authenticated(), allow.owner()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

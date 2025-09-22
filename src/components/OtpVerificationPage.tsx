@@ -11,11 +11,12 @@ import {
 } from "aws-amplify/auth";
 import { useSetUserData } from "../hooks/setUserData";
 import { LoadingButton } from "./ui/LoadingButton";
+import { LocalSchema } from "../amplifyClient";
 
 interface OtpVerificationPageProps {
   userEmail: string;
   onCancel: () => void;
-  onVerify: () => void;
+  onVerify: (data: {user: LocalSchema["User"]["type"]; company: LocalSchema["Company"]["type"]}) => void;
 }
 
 export function OtpVerificationPage({
@@ -72,10 +73,11 @@ export function OtpVerificationPage({
           userJobTitle: state.userFormData?.jobTitle || "",
           userFullName: state.userFormData?.name || "",
         });
-        console.log("User data set result:", result);
         dispatch({ type: "SET_LOGGED_IN_USER_DETAILS", payload: currentUser });
         setVerifying(false);
-        onVerify();
+        setTimeout(() => {
+          onVerify({user: result.user as LocalSchema['User']['type'], company: result.company as LocalSchema['Company']['type']});
+        }, 1000)
       } catch (err) {
         setVerifying(false);
         setError(
@@ -104,7 +106,6 @@ export function OtpVerificationPage({
       setCountdown(60);
       setCanResend(false);
     } catch (err) {
-      console.log("Error:", err);
     }
     setOtp("");
   };

@@ -1,34 +1,31 @@
-import React, { useEffect, useState } from "react";
+import { getCurrentUser, signOut } from "aws-amplify/auth";
+import { useEffect, useState } from "react";
 import {
+  Route,
   BrowserRouter as Router,
   Routes,
-  Route,
-  useNavigate,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
+import { client, LocalSchema } from "./amplifyClient";
+import { EmailLoginModal } from "./components/EmailLoginModal";
+import { HomePage } from "./components/HomePage";
+import { Layout } from "./components/Layout";
+import { LoginPage } from "./components/LoginPage";
+import { OtpVerificationPage } from "./components/OtpVerificationPage";
+import { Tier1Assessment } from "./components/Tier1Assessment";
+import { Tier1Results } from "./components/Tier1Results";
+import { Tier2Assessment } from "./components/Tier2Assessment";
 import {
   AppProvider,
   useAppContext,
   useHasCompleteProfile,
   UserData,
 } from "./context/AppContext";
-import { Layout } from "./components/Layout";
-import { HomePage } from "./components/HomePage";
-import { Tier1Assessment } from "./components/Tier1Assessment";
-import { Tier2Assessment } from "./components/Tier2Assessment";
-import { LoginPage } from "./components/LoginPage";
-import { OtpVerificationPage } from "./components/OtpVerificationPage";
-import { EmailLoginModal } from "./components/EmailLoginModal";
-import { Tier1Results } from "./components/Tier1Results";
-import { getCurrentUser, signOut } from "aws-amplify/auth";
 import { useSetUserData } from "./hooks/setUserData";
-import { client } from "./amplifyClient";
-
-interface AssessmentData {
-  focusAreas: string[];
-  maturityLevels: string[];
-  gridData: Record<string, Record<string, string>>;
-}
+import { useAssessment } from "./hooks/useAssesment";
+import { seedDataService } from "./services/seedDataService";
+import { calculateTier1Score } from "./utils/scoreCalculator";
 
 function AppContent() {
   const { state, dispatch } = useAppContext();
@@ -36,44 +33,30 @@ function AppContent() {
   const location = useLocation();
   const hasCompleteProfile = useHasCompleteProfile();
   const { setUserData } = useSetUserData();
-  const [assessmentData, setAssessmentData] = useState<AssessmentData | null>(
-    null
-  );
+  const { submitTier1Assessment, fetchUserAssessments } = useAssessment();
 
   const checkIfUserAlreadyLoggedIn = async () => {
     try {
+      dispatch({ type: "SET_IS_LOADING_INITIAL_DATA", payload: true });
       const currentUser = await getCurrentUser();
       if (currentUser) {
         dispatch({ type: "SET_LOGGED_IN_USER_DETAILS", payload: currentUser });
         setUserData({ loggedInUserDetails: currentUser! });
       }
+      dispatch({ type: "SET_IS_LOADING_INITIAL_DATA", payload: false });
     } catch (error) {
+      dispatch({ type: "SET_IS_LOADING_INITIAL_DATA", payload: false });
       console.error("Error checking if user is logged in:", error);
     }
   };
 
-
-  const fetchTier1Assessment = async () => {
-    try {
-      const { data } = await client.queries.getAssessmentData({
-        authMode: "apiKey",
-      });
-
-      if (data && data.focusAreas && data.maturityLevels && data.gridData) {
-        setAssessmentData({
-          focusAreas: data.focusAreas,
-          maturityLevels: data.maturityLevels,
-          gridData: JSON.parse(JSON.parse(data.gridData as unknown as string)),
-        } as AssessmentData);
-      }
-    } catch (error) {
-      console.error("Error fetching Tier 1 assessment data:", error);
-    }
+  const checkAndSetupQuestions = async () => {
+    await seedDataService.initializeDefaultQuestions();
   };
 
   useEffect(() => {
-    fetchTier1Assessment();
     checkIfUserAlreadyLoggedIn();
+    checkAndSetupQuestions();
   }, []);
 
   const getCurrentView = (): "home" | "tier1" | "tier2" => {
@@ -128,8 +111,12 @@ function AppContent() {
     navigate("/email-login");
   };
 
-  const handleLoginOtpVerification = () => {
+  const handleLoginOtpVerification = async (data: {user?: LocalSchema['User']['type']; company?: LocalSchema['Company']['type'];}) => {
     dispatch({ type: "SET_LOGIN_EMAIL", payload: "" });
+    if (state.redirectPathAfterLogin?.includes("tier1-results")) {
+      await submitTier1Assessment(data);
+      await fetchUserAssessments();
+    }
     navigate(state.redirectPathAfterLogin || "/");
     dispatch({ type: "SET_REDIRECT_PATH_AFTER_LOGIN", payload: undefined });
   };
@@ -143,13 +130,15 @@ function AppContent() {
     navigate("/tier1");
   };
 
-  const handleTier1Complete = (responses: Record<string, string>) => {
-    console.log("Tier 1 assessment completed with responses:", responses);
+  const handleTier1Complete = async (responses: Record<string, string>) => {
     dispatch({ type: "SET_TIER1_RESPONSES", payload: responses });
-    // Calculate score based on responses (simplified calculation)
-    const score = Math.floor(Math.random() * 40) + 60; // Demo: random score between 60-100
-    dispatch({ type: "SET_TIER1_SCORE", payload: score });
+    dispatch({
+      type: "SET_TIER1_SCORE",
+      payload: calculateTier1Score(responses),
+    });
     if (hasCompleteProfile) {
+      await submitTier1Assessment({});
+      await fetchUserAssessments();
       navigate("/tier1-results");
     } else {
       dispatch({
@@ -160,7 +149,6 @@ function AppContent() {
     }
   };
 
-  console.log("App State:", state);
   return (
     <Layout
       currentView={getCurrentView()}
@@ -179,14 +167,7 @@ function AppContent() {
         />
         <Route
           path="/tier1"
-          element={
-            assessmentData ? (
-              <Tier1Assessment
-                onComplete={handleTier1Complete}
-                assessmentData={assessmentData!}
-              />
-            ) : null
-          }
+          element={<Tier1Assessment onComplete={handleTier1Complete} />}
         />
         <Route
           path="/tier2"
@@ -216,12 +197,14 @@ function AppContent() {
         <Route
           path="/tier1-results"
           element={
-            <Tier1Results
-              score={state.tier1Score}
-              onNavigateToTier2={() => navigate("/tier2")}
-              onScheduleCall={handleScheduleCall}
-              onRetakeAssessment={handleRetakeAssessment}
-            />
+            state.tier1Score ? (
+              <Tier1Results
+                score={state.tier1Score}
+                onNavigateToTier2={() => navigate("/tier2")}
+                onScheduleCall={handleScheduleCall}
+                onRetakeAssessment={handleRetakeAssessment}
+              />
+            ) : null
           }
         />
         <Route

@@ -1,14 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { TrendingUp, Calendar, ArrowRight, BarChart3 } from 'lucide-react';
+import { Tier1Score } from '../context/AppContext';
+import { useAssessment } from '../hooks/useAssesment';
 
 interface Tier1ResultsProps {
-  score: number;
+  score: Tier1Score;
   onNavigateToTier2: () => void;
   onScheduleCall: () => void;
   onRetakeAssessment: () => void;
 }
 
 export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetakeAssessment }: Tier1ResultsProps) {
+  const { userAssessments } = useAssessment();
+
+  useEffect(() => {
+  }, [userAssessments]);
   const getMaturityLevel = (score: number): string => {
     if (score >= 85) return 'World Class';
     if (score >= 70) return 'Established';
@@ -17,10 +23,10 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
   };
 
   const getScoreColor = (score: number): string => {
-    if (score >= 85) return '#05f'; // primary
-    if (score >= 70) return '#088aff'; // accent
-    if (score >= 50) return '#374151'; // secondary
-    return '#6b7280'; // gray-500
+    if (score >= 85) return '#10b981'; // emerald-500 - World Class (green)
+    if (score >= 70) return '#3b82f6'; // blue-500 - Established (blue)
+    if (score >= 50) return '#f59e0b'; // amber-500 - Emerging (orange)
+    return '#ef4444'; // red-500 - Basic (red)
   };
 
   const getRecommendations = (score: number): string[] => {
@@ -52,15 +58,15 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
     ];
   };
 
-  const maturityLevel = getMaturityLevel(score);
-  const scoreColor = getScoreColor(score);
-  const recommendations = getRecommendations(score);
+  const maturityLevel = getMaturityLevel(score.overallScore);
+  const scoreColor = getScoreColor(score.overallScore);
+  const recommendations = getRecommendations(score.overallScore);
 
   // Calculate circle properties for animated progress
   const radius = 120;
   const circumference = 2 * Math.PI * radius;
   const strokeDasharray = circumference;
-  const strokeDashoffset = circumference - (score / 100) * circumference;
+  const strokeDashoffset = circumference - (score.overallScore / 100) * circumference;
 
   return (
     <main className="flex-1 p-8">
@@ -106,7 +112,7 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <div className="text-6xl font-bold" style={{ color: scoreColor }}>
-                    {score}
+                    {score.overallScore}
                   </div>
                   <div className="text-gray-500 text-lg font-medium mt-1">
                     {maturityLevel}

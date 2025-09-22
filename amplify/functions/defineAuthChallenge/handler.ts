@@ -1,8 +1,6 @@
 import { Handler } from "aws-lambda";
 
 export const handler: Handler = async (event: any) => {
-  console.log("🔹 DefineAuthChallenge event:", JSON.stringify(event, null, 2));
-
   // New session → request an OTP
   if (event.request.session.length === 0) {
     event.response.issueTokens = false;

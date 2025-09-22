@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthFlow } from "../hooks/useAuthFlow";
 import { ifDomainAlloeded } from "../utils/domain";
 import { LoadingButton } from "./ui/LoadingButton";
+import { useAssessment } from "../hooks/useAssesment";
 
 interface LoginPageProps {
   onLogin: (userData: UserData) => void;
@@ -32,6 +33,7 @@ export function LoginPage({ onLogin, onCancel }: LoginPageProps) {
   });
   const isUserLoggedIn = !!state.loggedInUserDetails?.signInDetails?.loginId;
   const [loading, setLoading] = useState(false);
+  const { submitTier1Assessment, fetchUserAssessments } = useAssessment();
 
   const [errors, setErrors] = useState<Partial<UserData>>({});
 
@@ -99,6 +101,8 @@ export function LoginPage({ onLogin, onCancel }: LoginPageProps) {
         });
         dispatch({ type: "SET_USER_DATA", payload: updatedUser });
       }
+      await submitTier1Assessment({});
+      await fetchUserAssessments();
       navigate("/tier1-results");
     } catch (err) {
       setLoading(false);

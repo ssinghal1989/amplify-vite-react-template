@@ -5,13 +5,10 @@ const ses = new SES();
 const cognito = new CognitoIdentityServiceProvider();
 
 export const handler: Handler = async (event: any) => {
-  console.log("🔹 CreateAuthChallenge event:", JSON.stringify(event, null, 2));
   const { userPoolId, userName, request, callerContext } = event;
   
   // 🛑 Step 1: If user is UNCONFIRMED → resend Cognito confirmation code
   if (request.userAttributes?.["cognito:user_status"] === "UNCONFIRMED") {
-    console.log("⚠️ User is UNCONFIRMED → resending signup confirmation email");
-
     try {
       await cognito
         .resendConfirmationCode({
@@ -53,16 +50,12 @@ export const handler: Handler = async (event: any) => {
       email = event.request.userAttributes?.email;
     }
 
-    console.log("Resolved email:", email);
-
     if (!email || !email.includes("@")) {
       throw new Error(`Invalid email: ${email}`);
     }
 
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log("Generated OTP:", otp);
-
     event.response.privateChallengeParameters = { otp };
     event.response.challengeMetadata = "EMAIL_OTP";
     event.response.publicChallengeParameters = { email };
@@ -78,7 +71,6 @@ export const handler: Handler = async (event: any) => {
     //       Source: "ssinghal1989@gmail.com", // must be SES-verified
     //     })
     //     .promise();
-    //   console.log("✅ OTP email sent to", email);
     // } catch (err) {
     //   console.error("❌ Failed to send email:", err);
     //   throw err;

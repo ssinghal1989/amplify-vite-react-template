@@ -1,4 +1,4 @@
-import { GetCurrentUserOutput } from "aws-amplify/auth";
+import { getCurrentUser, GetCurrentUserOutput } from "aws-amplify/auth";
 import React, {
   createContext,
   useContext,
@@ -8,6 +8,19 @@ import React, {
 } from "react";
 import { client, LocalSchema } from "../amplifyClient";
 import { getCompanyNameFromDomain, getDomainFromEmail } from "../utils/common";
+import { useSetUserData } from "../hooks/setUserData";
+
+export interface Tier1Score {
+  overallScore: number;
+  totalQuestions: number;
+  scoreBreakdown: {
+    basic: number;
+    emerging: number;
+    established: number;
+    worldClass: number;
+  };
+  maturityLevel: string;
+}
 
 export interface UserData {
   name: string;
@@ -24,6 +37,7 @@ export interface AppState {
   userFormData: UserData | null;
   loginEmail: string;
   loggedInUserDetails: GetCurrentUserOutput | null;
+  isLoadingInitialData: boolean;
 
   // Company data
   company: LocalSchema["Company"]["type"] | null;
@@ -32,7 +46,7 @@ export interface AppState {
   loginNextStep: LOGIN_NEXT_STEP;
 
   // Assessment data
-  tier1Score: number;
+  tier1Score: Tier1Score | null;
   tier1Responses: Record<string, string>;
 
   // UI state
@@ -51,13 +65,14 @@ export type AppAction =
       payload: UserData | null;
     }
   | { type: "SET_LOGIN_EMAIL"; payload: string }
-  | { type: "SET_TIER1_SCORE"; payload: number }
+  | { type: "SET_TIER1_SCORE"; payload: Tier1Score | null }
   | { type: "SET_TIER1_RESPONSES"; payload: Record<string, string> }
   | { type: "TOGGLE_SIDEBAR" }
   | { type: "LOGIN_NEXT_STEP"; payload: LOGIN_NEXT_STEP }
   | { type: "SET_LOGGED_IN_USER_DETAILS"; payload: GetCurrentUserOutput | null }
   | { type: "SET_LOGIN_FLOW"; payload: "DIRECT" | "VIA_ASSESSMENT" | null }
   | { type: "SET_REDIRECT_PATH_AFTER_LOGIN"; payload: string | undefined }
+  | { type: "SET_IS_LOADING_INITIAL_DATA"; payload: boolean }
   | { type: "RESET_STATE" };
 
 const initialState: AppState = {
@@ -65,13 +80,14 @@ const initialState: AppState = {
   company: null,
   userFormData: null,
   loginEmail: "",
-  tier1Score: 78,
+  tier1Score: null,
   tier1Responses: {},
   sidebarCollapsed: false,
   loginNextStep: "CONFIRM_SIGNUP",
   loggedInUserDetails: null,
   loginFlow: null,
   redirectPathAfterLogin: undefined,
+  isLoadingInitialData: false,
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -98,6 +114,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, loginFlow: action.payload };
     case "SET_REDIRECT_PATH_AFTER_LOGIN":
       return { ...state, redirectPathAfterLogin: action.payload };
+    case "SET_IS_LOADING_INITIAL_DATA":
+      return { ...state, isLoadingInitialData: action.payload };
     case "RESET_STATE":
       return { ...initialState };
     default:
@@ -115,55 +133,9 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  const setUserData = async () => {
-    let { data: user, errors } = await client.models.User.get({
-      id: state.loggedInUserDetails!.userId,
-    });
-    const loggedInUserDetails = state.loggedInUserDetails;
-    if (!user && !errors && loggedInUserDetails) {
-      // If user data not found create a new user entry
-      const { data } = await client.models.User.create({
-        id: loggedInUserDetails?.userId,
-        email: loggedInUserDetails?.signInDetails?.loginId!,
-      });
-      user = data;
-
-      let companyData = null;
-      const companyDomain = getDomainFromEmail(
-        loggedInUserDetails?.signInDetails?.loginId || ""
-      );
-      // Try to find a company with the user's email domain
-      const { data: _data } = await client.models.Company.list({
-        filter: { primaryDomain: { eq: companyDomain! } },
-      });
-      companyData = _data;
-      // If no company exists for the user's domain, create one
-      if (!companyData.length) {
-        const response = await client.models.Company.create({
-          primaryDomain: companyDomain!,
-          name: getCompanyNameFromDomain(companyDomain!) || "",
-        });
-        companyData = response?.data;
-      } else {
-        companyData = companyData[0];
-      }
-      if (user && !user.companyId && companyData) {
-        const response = await client.models.User.update({
-          id: user.id,
-          companyId: companyData.id,
-        });
-        user = response?.data;
-      }
-      const company = await user?.company();
-      dispatch({ type: "SET_USER_DATA", payload: user });
-      dispatch({ type: "SET_COMPANY_DATA", payload: company?.data || null });
-    } else {
-      dispatch({ type: "SET_USER_DATA", payload: user });
-    }
-  };
   useEffect(() => {
     if (state.loggedInUserDetails) {
-      //setUserData();
+      // checkIfUserAlreadyLoggedIn();
     } else {
       dispatch({ type: "SET_USER_DATA", payload: null });
     }
