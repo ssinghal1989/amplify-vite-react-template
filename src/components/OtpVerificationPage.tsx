@@ -75,9 +75,7 @@ export function OtpVerificationPage({
         });
         dispatch({ type: "SET_LOGGED_IN_USER_DETAILS", payload: currentUser });
         setVerifying(false);
-        setTimeout(() => {
-          onVerify({user: result.user as LocalSchema['User']['type'], company: result.company as LocalSchema['Company']['type']});
-        }, 1000)
+        onVerify({user: result.user as LocalSchema['User']['type'], company: result.company as LocalSchema['Company']['type']});
       } catch (err) {
         setVerifying(false);
         setError(

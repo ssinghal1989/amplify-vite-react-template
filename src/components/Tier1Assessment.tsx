@@ -30,8 +30,8 @@ export function Tier1Assessment({
   >({});
   const {
     userTier1Assessments,
-    updateTier1AssessmentResponse,
     submittingAssesment,
+    setSubmittingAssesment,
   } = useAssessment();
 
   // Load questions from database on component mount
@@ -86,24 +86,8 @@ export function Tier1Assessment({
       : true;
 
   const handleSubmit = () => {
-    if (userTier1Assessments && userTier1Assessments.length > 0) {
-      updateAssessmentResponse();
-    } else {
-      // If no previous assessment, create a new one
-      onComplete(selectedResponses);
-    }
-  };
-
-  const updateAssessmentResponse = async () => {
-    try {
-      await updateTier1AssessmentResponse({
-        assessmentId: firstPreviousAssessment?.id || "",
-        updatedResponses: selectedResponses,
-        updatedScores: calculateTier1Score(selectedResponses),
-      });
-    } catch (error) {
-      console.error("Error in updating responses");
-    }
+    setSubmittingAssesment(true);
+    onComplete(selectedResponses);
   };
 
   const getScoreColor = (score: number): string => {
@@ -260,15 +244,11 @@ export function Tier1Assessment({
               <LoadingButton
                 onClick={handleSubmit}
                 loading={submittingAssesment}
-                loadingText={
-                  firstPreviousAssessment ? "Updating..." : "Submitting..."
-                }
+                loadingText="Submitting..."
                 disabled={!isAllAnswered || !ifDataChanged}
                 size="md"
               >
-                {firstPreviousAssessment
-                  ? "Update Assessment"
-                  : "Submit Assessment"}
+                Submit Assessment
               </LoadingButton>
             </div>
           </div>
@@ -301,7 +281,7 @@ export function Tier1Assessment({
                       const isSelected =
                         selectedResponses[question.id] === option.value;
                       return (
-                        <td key={option.id} className="p-2 align-top">
+                        <td key={`${question.id}_${option.label}`} className="p-2 align-top">
                           <div
                             onClick={() =>
                               handleOptionSelect(question, option.value)

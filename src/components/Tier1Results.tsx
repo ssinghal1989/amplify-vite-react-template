@@ -144,12 +144,12 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
                       }}
                     />
                   </div>
-                  <div className="flex justify-between text-sm text-gray-500 mt-2">
+                  {/* <div className="flex justify-between text-sm text-gray-500 mt-2">
                     <span>Basic</span>
                     <span>Emerging</span>
                     <span>Established</span>
                     <span>World Class</span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
@@ -158,7 +158,7 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Recommendations</h3>
                 <div className="space-y-3">
                   {recommendations.map((recommendation, index) => (
-                    <div key={index} className="flex items-start space-x-3">
+                    <div key={index} className="flex items-center space-x-3">
                       <div 
                         className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
                         style={{ backgroundColor: scoreColor }}
@@ -175,29 +175,31 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
 
           {/* Action Buttons */}
           <div className="grid md:grid-cols-3 gap-4">
+
             {/* <button
               onClick={onScheduleCall}
-              className="flex items-center justify-center space-x-2 bg-white border-2 border-gray-200 text-gray-700 py-4 px-6 rounded-xl font-semibold hover:border-gray-300 hover:shadow-md transition-all duration-200"
+              className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-4 px-4 rounded-xl font-semibold hover:opacity-90 hover:shadow-lg transition-all duration-200"
+        
             >
               <Calendar className="w-5 h-5" />
-              <span>Set up a Call to Discuss</span>
-            </button>
-
-            <button
-              onClick={onNavigateToTier2}
-              className="flex items-center justify-center space-x-2 text-white py-4 px-6 rounded-xl font-semibold hover:opacity-90 hover:shadow-lg transition-all duration-200"
-              style={{ backgroundColor: '#05f' }}
-            >
-              <TrendingUp className="w-5 h-5" />
-              <span>Begin Tier 2 Assessment</span>
+              <span className='text-sm'>Set up a Call to Discuss</span>
             </button> */}
 
             <button
+              onClick={onNavigateToTier2}
+              className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-4 px-4 rounded-xl font-semibold hover:opacity-90 hover:shadow-lg transition-all duration-200"
+              
+            >
+              <TrendingUp className="w-5 h-5" />
+              <span className='text-sm'>Request In-Depth Assessment</span>
+            </button>
+
+            <button
               onClick={onRetakeAssessment}
-              className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-4 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
+              className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-4 px-4 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
             >
               <BarChart3 className="w-5 h-5" />
-              <span>Retake Assessment</span>
+              <span className='text-sm'>Retake Assessment</span>
             </button>
           </div>
 

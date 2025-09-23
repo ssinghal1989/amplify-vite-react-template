@@ -30,6 +30,7 @@ export function useSetUserData() {
           email: loggedInUserDetails.signInDetails?.loginId!,
           name: userFullName || "",
           jobTitle: userJobTitle || "",
+          role: 'user',
         });
         user = newUser;
 

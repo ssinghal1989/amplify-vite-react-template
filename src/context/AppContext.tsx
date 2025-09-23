@@ -82,7 +82,7 @@ const initialState: AppState = {
   loginEmail: "",
   tier1Score: null,
   tier1Responses: {},
-  sidebarCollapsed: false,
+  sidebarCollapsed: true,
   loginNextStep: "CONFIRM_SIGNUP",
   loggedInUserDetails: null,
   loginFlow: null,

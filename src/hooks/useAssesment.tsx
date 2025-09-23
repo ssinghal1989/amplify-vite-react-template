@@ -3,6 +3,13 @@ import { client, LocalSchema } from "../amplifyClient";
 import { Tier1Score, useAppContext } from "../context/AppContext"; // adjust path
 import { Tier1TemplateId } from "../services/defaultQuestions";
 
+type Tier1AssessmentRequest = {
+  user?: LocalSchema["User"]["type"];
+  company?: LocalSchema["Company"]["type"];
+  tier1Score?: Tier1Score;
+  tier1Responses?: Record<string, string>;
+};
+
 export function useAssessment() {
   const [userAssessments, setUserAssessments] = useState<Record<string, any>[]>(
     []
@@ -42,36 +49,35 @@ export function useAssessment() {
     if (!state.loggedInUserDetails?.userId) return;
 
     try {
-      const response = await client.models.User.get(
-        {
-          id: state.loggedInUserDetails?.userId,
-        },
-        {
-          selectionSet: [
-            "assessmentInstances.id",
-            "assessmentInstances.templateId",
-            "assessmentInstances.score",
-            "assessmentInstances.responses",
-            "assessmentInstances.companyId",
-            "assessmentInstances.initiatorUserId",
-            "assessmentInstances.assessmentType",
-            "assessmentInstances.createdAt",
-            "assessmentInstances.updatedAt",
-          ],
-        }
+      const { data } =
+        await client.models.AssessmentInstance.listAssessmentInstanceByInitiatorUserIdAndCreatedAt(
+          {
+            initiatorUserId: state.loggedInUserDetails?.userId,
+          }
+        );
+      setUserAssessments(
+        data.sort(
+          (a, b) =>
+            new Date(b.createdAt ?? 0).getTime() -
+            new Date(a.createdAt ?? 0).getTime()
+        ) || []
       );
-      setUserAssessments(response?.data?.assessmentInstances || []);
     } catch (error) {
       console.error("Error fetching user assessments:", error);
     }
   }, [dispatch, state.loggedInUserDetails?.userId]);
 
-  const submitTier1Assessment = useCallback(async ({user, company}: {user?: LocalSchema['User']['type']; company?: LocalSchema['Company']['type'];}) => {
+  const submitTier1Assessment = async ({
+    user,
+    company,
+    tier1Score,
+    tier1Responses,
+  }: Tier1AssessmentRequest) => {
+    setSubmittingAssesment(true);
     try {
-      setSubmittingAssesment(true);
       if (
-        !state.tier1Responses ||
-        !state.tier1Score ||
+        (!state.tier1Responses && !tier1Score) ||
+        (!state.tier1Score && !tier1Responses) ||
         (!state.userData && !user) ||
         (!state.company && !company)
       ) {
@@ -79,33 +85,24 @@ export function useAssessment() {
         setSubmittingAssesment(false);
         return;
       }
-
-      if (!!userTier1Assessments?.length) {
-        // User already have submitted assessment for tier 1 update the first one.
-        const updatedAssessmentData = {
-          id: userTier1Assessments[0].id,
-          score: JSON.stringify(state.tier1Score), // Store the score as JSON
-          responses: JSON.stringify(state.tier1Responses), // Store the responses as JSON
-        };
-        await client.models.AssessmentInstance.update(updatedAssessmentData);
-      } else {
-        // Create a new assessment instance for user
-        const assessmentData = {
-          templateId: Tier1TemplateId, // Assuming a fixed template ID for Tier 1
-          companyId: state.userData?.companyId || company?.id,
-          initiatorUserId: state?.userData?.id || user?.id,
-          assessmentType: "TIER1" as "TIER1",
-          score: JSON.stringify(state.tier1Score), // Store the score as JSON
-          responses: JSON.stringify(state.tier1Responses), // Store the responses as JSON
-        };
-        await client.models.AssessmentInstance.create(assessmentData);
-      }
+      // Create a new assessment instance for user
+      const assessmentData = {
+        templateId: Tier1TemplateId, // Assuming a fixed template ID for Tier 1
+        companyId: state.userData?.companyId || company?.id,
+        initiatorUserId: state?.userData?.id || user?.id,
+        assessmentType: "TIER1" as "TIER1",
+        score: JSON.stringify(tier1Score || state.tier1Score), // Store the score as JSON
+        responses: JSON.stringify(tier1Responses || state.tier1Responses), // Store the responses as JSON
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await client.models.AssessmentInstance.create(assessmentData);
       setSubmittingAssesment(false);
     } catch (err) {
       setSubmittingAssesment(false);
       console.error("Error in submitting assessment");
     }
-  }, [dispatch, state]);
+  };
 
   const updateTier1AssessmentResponse = useCallback(
     async ({
@@ -115,7 +112,7 @@ export function useAssessment() {
     }: {
       assessmentId: string;
       updatedResponses: any;
-      updatedScores: Tier1Score
+      updatedScores: Tier1Score;
     }) => {
       try {
         setSubmittingAssesment(true);
@@ -140,5 +137,6 @@ export function useAssessment() {
     userAssessments,
     userTier1Assessments,
     submittingAssesment,
+    setSubmittingAssesment,
   };
 }

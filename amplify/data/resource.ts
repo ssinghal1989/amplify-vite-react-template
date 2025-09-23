@@ -28,7 +28,7 @@ export const schema = a.schema({
       email: a.email().required(),
       name: a.string(),
       jobTitle: a.string(),
-      //role: a.enum(['member', 'admin', 'facilitator']).default('member'),
+      role: a.enum(['user', 'admin', 'superAdmin']),
       companyId: a.id(),
       company: a.belongsTo("Company", "companyId"),
       createdAt: a.datetime().default(new Date().toISOString()),
@@ -119,6 +119,9 @@ export const schema = a.schema({
       //workshopSessions: a.hasMany('WorkshopSession', 'assessmentInstanceId'),
       //assets: a.hasMany('Asset', 'assessmentInstanceId'),
     })
+    .secondaryIndexes((index) => [
+      index('initiatorUserId').sortKeys(['createdAt'])
+    ])
     .authorization((allow) => [allow.authenticated(), allow.owner()]),
 });
 

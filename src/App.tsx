@@ -1,6 +1,7 @@
 import { getCurrentUser, signOut } from "aws-amplify/auth";
 import { useEffect, useState } from "react";
 import {
+  Navigate,
   Route,
   BrowserRouter as Router,
   Routes,
@@ -26,6 +27,7 @@ import { useSetUserData } from "./hooks/setUserData";
 import { useAssessment } from "./hooks/useAssesment";
 import { seedDataService } from "./services/seedDataService";
 import { calculateTier1Score } from "./utils/scoreCalculator";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 function AppContent() {
   const { state, dispatch } = useAppContext();
@@ -111,7 +113,10 @@ function AppContent() {
     navigate("/email-login");
   };
 
-  const handleLoginOtpVerification = async (data: {user?: LocalSchema['User']['type']; company?: LocalSchema['Company']['type'];}) => {
+  const handleLoginOtpVerification = async (data: {
+    user?: LocalSchema["User"]["type"];
+    company?: LocalSchema["Company"]["type"];
+  }) => {
     dispatch({ type: "SET_LOGIN_EMAIL", payload: "" });
     if (state.redirectPathAfterLogin?.includes("tier1-results")) {
       await submitTier1Assessment(data);
@@ -131,13 +136,17 @@ function AppContent() {
   };
 
   const handleTier1Complete = async (responses: Record<string, string>) => {
+    const score = calculateTier1Score(responses);
     dispatch({ type: "SET_TIER1_RESPONSES", payload: responses });
     dispatch({
       type: "SET_TIER1_SCORE",
-      payload: calculateTier1Score(responses),
+      payload: score,
     });
     if (hasCompleteProfile) {
-      await submitTier1Assessment({});
+      await submitTier1Assessment({
+        tier1Score: score,
+        tier1Responses: responses,
+      });
       await fetchUserAssessments();
       navigate("/tier1-results");
     } else {
@@ -198,13 +207,17 @@ function AppContent() {
           path="/tier1-results"
           element={
             state.tier1Score ? (
-              <Tier1Results
-                score={state.tier1Score}
-                onNavigateToTier2={() => navigate("/tier2")}
-                onScheduleCall={handleScheduleCall}
-                onRetakeAssessment={handleRetakeAssessment}
-              />
-            ) : null
+              <ProtectedRoute requireAuth={true} redirectTo="/">
+                <Tier1Results
+                  score={state.tier1Score}
+                  onNavigateToTier2={() => navigate("/tier2")}
+                  onScheduleCall={handleScheduleCall}
+                  onRetakeAssessment={handleRetakeAssessment}
+                />
+              </ProtectedRoute>
+            ) : (
+              <Navigate to={"/"} state={{ from: location }} replace />
+            )
           }
         />
         <Route
