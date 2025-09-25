@@ -216,7 +216,8 @@ function AppContent() {
                 />
               </ProtectedRoute>
             ) : (
-              <Navigate to={"/"} state={{ from: location }} replace />
+              // <Navigate to={"/"} state={{ from: location }} replace />
+              null
             )
           }
         />

@@ -1,7 +1,12 @@
-import React, { useEffect } from 'react';
-import { TrendingUp, Calendar, ArrowRight, BarChart3 } from 'lucide-react';
+import React, { MouseEvent } from 'react';
+import { useState } from 'react';
+import Calendar from 'react-calendar';
+import { TrendingUp, Calendar as CalendarIcon, ArrowRight, BarChart3 } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
+import { LoadingButton } from './ui/LoadingButton';
+import { useLoader } from '../hooks/useLoader';
+import 'react-calendar/dist/Calendar.css';
 import { Tier1Score } from '../context/AppContext';
-import { useAssessment } from '../hooks/useAssesment';
 
 interface Tier1ResultsProps {
   score: Tier1Score;
@@ -10,11 +15,22 @@ interface Tier1ResultsProps {
   onRetakeAssessment: () => void;
 }
 
+interface ScheduleCallData {
+  selectedDate: Date | null;
+  selectedTimes: string[];
+  remarks: string;
+}
 export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetakeAssessment }: Tier1ResultsProps) {
-  const { userAssessments } = useAssessment();
+  const { isLoading: submitLoading, withLoading } = useLoader();
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleData, setScheduleData] = useState<ScheduleCallData>({
+    selectedDate: null,
+    selectedTimes: [],
+    remarks: ''
+  });
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showTimeSlots, setShowTimeSlots] = useState(false);
 
-  useEffect(() => {
-  }, [userAssessments]);
   const getMaturityLevel = (score: number): string => {
     if (score >= 85) return 'World Class';
     if (score >= 70) return 'Established';
@@ -23,10 +39,10 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
   };
 
   const getScoreColor = (score: number): string => {
-    if (score >= 85) return '#10b981'; // emerald-500 - World Class (green)
-    if (score >= 70) return '#3b82f6'; // blue-500 - Established (blue)
-    if (score >= 50) return '#f59e0b'; // amber-500 - Emerging (orange)
-    return '#ef4444'; // red-500 - Basic (red)
+    if (score >= 85) return '#05f'; // primary
+    if (score >= 70) return '#088aff'; // accent
+    if (score >= 50) return '#374151'; // secondary
+    return '#6b7280'; // gray-500
   };
 
   const getRecommendations = (score: number): string[] => {
@@ -61,6 +77,133 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
   const maturityLevel = getMaturityLevel(score.overallScore);
   const scoreColor = getScoreColor(score.overallScore);
   const recommendations = getRecommendations(score.overallScore);
+
+  // Generate time slots
+  const generateTimeSlots = () => {
+    const slots = [];
+    const startHour = 9;
+    const endHour = 17;
+    
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const hour12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const time12 = `${hour12}:${minute.toString().padStart(2, '0')} ${ampm}`;
+        
+        slots.push({
+          value: time24,
+          label: time12
+        });
+      }
+    }
+    
+    return slots;
+  };
+
+  const timeSlots = generateTimeSlots();
+
+  // Check if date is available (exclude weekends and past dates)
+  const isDateAvailable = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const dayOfWeek = date.getDay();
+    return date >= today && dayOfWeek !== 0 && dayOfWeek !== 6; // Exclude weekends
+  };
+
+  // Get available time slots for selected date
+  const getAvailableTimeSlots = (date: Date | null) => {
+    if (!date) return [];
+    
+    // Simulate some unavailable slots based on date
+    const unavailableSlots = ['10:00', '14:30', '15:30'];
+    
+    return timeSlots.filter(slot => !unavailableSlots.includes(slot.value));
+  };
+
+  const handleScheduleClick = () => {
+    setShowScheduleModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowScheduleModal(false);
+    setScheduleData({
+      selectedDate: null,
+      selectedTimes: [],
+      remarks: ''
+    });
+    setShowCalendar(false);
+    setShowTimeSlots(false);
+  };
+
+  const handleDateSelect = (data: any) => {
+    console.log('data' ,data);
+    setScheduleData(prev => ({ ...prev, selectedDate: data, selectedTimes: [] }));
+    setShowCalendar(false);
+    setShowTimeSlots(true);
+  };
+
+  const handleTimeSelect = (time: string) => {
+    setScheduleData(prev => {
+      const currentTimes = prev.selectedTimes;
+      const isSelected = currentTimes.includes(time);
+      
+      let newTimes;
+      if (isSelected) {
+        // Remove time if already selected
+        newTimes = currentTimes.filter(t => t !== time);
+      } else {
+        // Add time if not selected
+        newTimes = [...currentTimes, time].sort();
+      }
+      
+      return { ...prev, selectedTimes: newTimes };
+    });
+  };
+
+  const handleRemarksChange = (remarks: string) => {
+    setScheduleData(prev => ({ ...prev, remarks }));
+  };
+
+  const handleSubmitSchedule = async () => {
+    if (!scheduleData.selectedDate || scheduleData.selectedTimes.length === 0) {
+      alert('Please select both date and at least one time slot');
+      return;
+    }
+
+    await withLoading(async () => {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Call the parent callback
+      onScheduleCall();
+      
+      // Close modal
+      handleCloseModal();
+    });
+  };
+
+  const formatSelectedDate = () => {
+    if (!scheduleData.selectedDate) return '';
+    return scheduleData.selectedDate.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const getSelectedTimeLabels = () => {
+    return scheduleData.selectedTimes
+      .map(timeValue => {
+        const slot = timeSlots.find(time => time.value === timeValue);
+        return slot ? slot.label : timeValue;
+      })
+      .join(', ');
+  };
+
+  const isFormValid = scheduleData.selectedDate !== null && scheduleData.selectedTimes.length > 0;
 
   // Calculate circle properties for animated progress
   const radius = 120;
@@ -144,12 +287,12 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
                       }}
                     />
                   </div>
-                  {/* <div className="flex justify-between text-sm text-gray-500 mt-2">
+                  <div className="flex justify-between text-sm text-gray-500 mt-2">
                     <span>Basic</span>
                     <span>Emerging</span>
                     <span>Established</span>
                     <span>World Class</span>
-                  </div> */}
+                  </div>
                 </div>
               </div>
 
@@ -158,7 +301,7 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Recommendations</h3>
                 <div className="space-y-3">
                   {recommendations.map((recommendation, index) => (
-                    <div key={index} className="flex items-center space-x-3">
+                    <div key={index} className="flex items-start space-x-3">
                       <div 
                         className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
                         style={{ backgroundColor: scoreColor }}
@@ -175,31 +318,29 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
 
           {/* Action Buttons */}
           <div className="grid md:grid-cols-3 gap-4">
-
             {/* <button
-              onClick={onScheduleCall}
-              className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-4 px-4 rounded-xl font-semibold hover:opacity-90 hover:shadow-lg transition-all duration-200"
-        
+              onClick={handleScheduleClick}
+              className="flex items-center justify-center space-x-2 bg-white border-2 border-gray-200 text-gray-700 py-4 px-6 rounded-xl font-semibold hover:border-gray-300 hover:shadow-md transition-all duration-200"
             >
-              <Calendar className="w-5 h-5" />
-              <span className='text-sm'>Set up a Call to Discuss</span>
+              <CalendarIcon className="w-5 h-5" />
+              <span>Set up a Call to Discuss</span>
             </button> */}
 
             <button
               onClick={onNavigateToTier2}
-              className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-4 px-4 rounded-xl font-semibold hover:opacity-90 hover:shadow-lg transition-all duration-200"
-              
+              className="flex content items-center justify-center space-x-2 text-white py-4 px-6 rounded-xl font-semibold hover:opacity-90 hover:shadow-lg transition-all duration-200"
+              style={{ backgroundColor: '#05f' }}
             >
               <TrendingUp className="w-5 h-5" />
-              <span className='text-sm'>Request In-Depth Assessment</span>
+              <span>Request In-Depth Assessment</span>
             </button>
 
             <button
               onClick={onRetakeAssessment}
-              className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-4 px-4 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
+              className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-4 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
             >
               <BarChart3 className="w-5 h-5" />
-              <span className='text-sm'>Retake Assessment</span>
+              <span>Retake Assessment</span>
             </button>
           </div>
 
@@ -213,7 +354,174 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
         </div>
       </div>
 
+      {/* Schedule Call Modal */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Schedule a Call</h2>
+                <button
+                  onClick={handleCloseModal}
+                  className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Date Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Date
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowCalendar(!showCalendar)}
+                    className="w-full flex items-center justify-between px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <CalendarIcon className="h-5 w-5 text-gray-400" />
+                      <span className={scheduleData.selectedDate ? 'text-gray-900' : 'text-gray-400'}>
+                        {scheduleData.selectedDate ? formatSelectedDate() : 'Select a date'}
+                      </span>
+                    </div>
+                  </button>
+                  
+                  {showCalendar && !showTimeSlots && (
+                    <div className="mt-4 p-4 border border-gray-200 rounded-xl bg-gray-50">
+                      <Calendar
+                        onChange={handleDateSelect}
+                        value={scheduleData.selectedDate}
+                        minDate={new Date()}
+                        maxDate={new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)} // 60 days from now
+                        tileDisabled={({ date }) => !isDateAvailable(date)}
+                        className="react-calendar-custom"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Time Selection */}
+                {showTimeSlots && scheduleData.selectedDate && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Select Time Slots
+                      </label>
+                      {scheduleData.selectedTimes.length > 0 && (
+                        <span className="text-xs text-primary font-medium">
+                          {scheduleData.selectedTimes.length} selected
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">
+                      You can select multiple time slots to give us more options
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {getAvailableTimeSlots(scheduleData.selectedDate).map((slot) => (
+                        <button
+                          key={slot.value}
+                          type="button"
+                          onClick={() => handleTimeSelect(slot.value)}
+                          className={`p-3 text-sm font-medium rounded-lg border transition-all duration-200 ${
+                            scheduleData.selectedTimes.includes(slot.value)
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-primary hover:bg-blue-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-center space-x-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{slot.label}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Selected Time Summary */}
+                {scheduleData.selectedDate && scheduleData.selectedTimes.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <div className="flex items-center space-x-3">
+                      <CalendarIcon className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          Selected Meeting Time{scheduleData.selectedTimes.length > 1 ? 's' : ''}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {formatSelectedDate()} at {getSelectedTimeLabels()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Remarks */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Remarks (Optional)
+                  </label>
+                  <textarea
+                    value={scheduleData.remarks}
+                    onChange={(e) => handleRemarksChange(e.target.value)}
+                    rows={3}
+                    className="block w-full px-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 resize-none"
+                    placeholder="Any specific topics you'd like to discuss or questions you have..."
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleCloseModal}
+                    className="flex-1 py-3 px-6 rounded-xl font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 transition-all duration-200 border border-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <LoadingButton
+                    onClick={handleSubmitSchedule}
+                    loading={submitLoading}
+                    loadingText="Scheduling..."
+                    disabled={!isFormValid}
+                    className="flex-1 py-3"
+                  >
+                    Schedule Call
+                  </LoadingButton>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
+        .react-calendar-custom {
+          width: 100%;
+          border: none;
+          font-family: inherit;
+        }
+        
+        .react-calendar-custom .react-calendar__tile {
+          border-radius: 8px;
+          margin: 2px;
+        }
+        
+        .react-calendar-custom .react-calendar__tile--active {
+          background: #05f;
+          color: white;
+        }
+        
+        .react-calendar-custom .react-calendar__tile:disabled {
+          background-color: #f3f4f6;
+          color: #9ca3af;
+        }
+        
+        .react-calendar-custom .react-calendar__tile:enabled:hover {
+          background-color: #e6f3ff;
+        }
+        
         @keyframes drawCircle {
           from {
             stroke-dashoffset: ${circumference};

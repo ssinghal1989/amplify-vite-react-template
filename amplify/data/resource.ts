@@ -123,6 +123,7 @@ export const schema = a.schema({
       index('initiatorUserId').sortKeys(['createdAt'])
     ])
     .authorization((allow) => [allow.authenticated(), allow.owner()]),
+    
 });
 
 export type Schema = ClientSchema<typeof schema>;
