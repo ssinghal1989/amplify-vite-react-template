@@ -11,6 +11,7 @@ import { questionsService } from "../services/questionsService";
 import { calculateTier1Score } from "../utils/scoreCalculator";
 import { Loader } from "./ui/Loader";
 import { LoadingButton } from "./ui/LoadingButton";
+import { getScoreColor } from "../utils/common";
 
 interface Tier1AssessmentProps {
   onComplete: (responses: Record<string, string>) => void;
@@ -88,13 +89,6 @@ export function Tier1Assessment({
   const handleSubmit = () => {
     setSubmittingAssesment(true);
     onComplete(selectedResponses);
-  };
-
-  const getScoreColor = (score: number): string => {
-    if (score >= 85) return '#10b981'; // emerald-500 - World Class (green)
-    if (score >= 70) return '#3b82f6'; // blue-500 - Established (blue)
-    if (score >= 50) return '#f59e0b'; // amber-500 - Emerging (orange)
-    return '#ef4444'; // red-500 - Basic (red)
   };
 
   useEffect(() => {

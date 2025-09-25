@@ -7,6 +7,7 @@ import { LoadingButton } from './ui/LoadingButton';
 import { useLoader } from '../hooks/useLoader';
 import 'react-calendar/dist/Calendar.css';
 import { Tier1Score } from '../context/AppContext';
+import { getScoreColor } from '../utils/common';
 
 interface Tier1ResultsProps {
   score: Tier1Score;
@@ -36,13 +37,6 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
     if (score >= 70) return 'Established';
     if (score >= 50) return 'Emerging';
     return 'Basic';
-  };
-
-  const getScoreColor = (score: number): string => {
-    if (score >= 85) return '#05f'; // primary
-    if (score >= 70) return '#088aff'; // accent
-    if (score >= 50) return '#374151'; // secondary
-    return '#6b7280'; // gray-500
   };
 
   const getRecommendations = (score: number): string[] => {
