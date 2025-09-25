@@ -4,6 +4,7 @@ interface UseLoaderReturn {
   isLoading: boolean;
   startLoading: () => void;
   stopLoading: () => void;
+  withLoading: <T>(asyncFn: () => Promise<T>) => Promise<T>;
 }
 
 export function useLoader(initialState: boolean = false): UseLoaderReturn {
@@ -17,12 +18,21 @@ export function useLoader(initialState: boolean = false): UseLoaderReturn {
     setIsLoading(false);
   }, []);
 
- 
+  const withLoading = useCallback(async (asyncFn: () => Promise<any>): Promise<any> => {
+    try {
+      setIsLoading(true);
+      const result = await asyncFn();
+      return result;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   return {
     isLoading,
     startLoading,
     stopLoading,
+    withLoading
   };
 }
 
