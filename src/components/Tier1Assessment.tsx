@@ -14,7 +14,7 @@ import { LoadingButton } from "./ui/LoadingButton";
 import { getScoreColor } from "../utils/common";
 
 interface Tier1AssessmentProps {
-  onComplete: (responses: Record<string, string>) => void;
+  onComplete: (responses: Record<string, string>, questions: any[]) => void;
 }
 
 const maturityOrder = ["BASIC", "EMERGING", "ESTABLISHED", "WORLD_CLASS"];
@@ -88,7 +88,7 @@ export function Tier1Assessment({
 
   const handleSubmit = () => {
     setSubmittingAssesment(true);
-    onComplete(selectedResponses);
+    onComplete(selectedResponses, questions);
   };
 
   useEffect(() => {

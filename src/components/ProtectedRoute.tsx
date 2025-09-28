@@ -33,19 +33,16 @@ export function ProtectedRoute({
 
   // Check if user authentication is required
   if (requireAuth && !state.loggedInUserDetails) {
-    console.log('🔒 Protected Route: User not authenticated, redirecting to home');
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
   // Check if complete profile is required
   if (requireCompleteProfile && !hasCompleteProfile) {
-    console.log('🔒 Protected Route: Complete profile required, redirecting to home');
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
   // Check if Tier 1 completion is required
   if (requireTier1Completion && !state.tier1Score) {
-    console.log('🔒 Protected Route: Tier 1 completion required, redirecting to home');
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 

@@ -1,16 +1,15 @@
-import React, { MouseEvent } from 'react';
+import { BarChart3, Calendar as CalendarIcon, Clock, TrendingUp, X } from 'lucide-react';
 import { useState } from 'react';
 import Calendar from 'react-calendar';
-import { TrendingUp, Calendar as CalendarIcon, ArrowRight, BarChart3 } from 'lucide-react';
-import { X, Clock } from 'lucide-react';
-import { LoadingButton } from './ui/LoadingButton';
-import { useLoader } from '../hooks/useLoader';
 import 'react-calendar/dist/Calendar.css';
-import { Tier1Score } from '../context/AppContext';
-import { getScoreColor } from '../utils/common';
+import { useLoader } from '../hooks/useLoader';
+import { getMaturityLevel, getScoreColor } from '../utils/common';
+import { generateRecommendations } from '../utils/recommendationsGenerator';
+import { Tier1ScoreResult } from '../utils/scoreCalculator';
+import { LoadingButton } from './ui/LoadingButton';
 
 interface Tier1ResultsProps {
-  score: Tier1Score;
+  score: Tier1ScoreResult;
   onNavigateToTier2: () => void;
   onScheduleCall: () => void;
   onRetakeAssessment: () => void;
@@ -31,13 +30,6 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
   });
   const [showCalendar, setShowCalendar] = useState(false);
   const [showTimeSlots, setShowTimeSlots] = useState(false);
-
-  const getMaturityLevel = (score: number): string => {
-    if (score >= 85) return 'World Class';
-    if (score >= 70) return 'Established';
-    if (score >= 50) return 'Emerging';
-    return 'Basic';
-  };
 
   const getRecommendations = (score: number): string[] => {
     if (score >= 85) {
@@ -70,16 +62,18 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
 
   const maturityLevel = getMaturityLevel(score.overallScore);
   const scoreColor = getScoreColor(score.overallScore);
-  const recommendations = getRecommendations(score.overallScore);
+  const recommendations = score?.pillarScores ? generateRecommendations(score) : getRecommendations(score.overallScore);
 
   // Generate time slots
   const generateTimeSlots = () => {
     const slots = [];
     const startHour = 9;
-    const endHour = 17;
+    const endHour = 18; // Changed to 18 to include 6PM (18:00)
     
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
+    for (let hour = startHour; hour <= endHour; hour++) {
+      // For the last hour (6PM), only add the top of the hour slot
+      const maxMinute = hour === endHour ? 0 : 30;
+      for (let minute = 0; minute <= maxMinute; minute += 30) {
         const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         const hour12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
         const ampm = hour >= 12 ? 'PM' : 'AM';
@@ -132,7 +126,6 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
   };
 
   const handleDateSelect = (data: any) => {
-    console.log('data' ,data);
     setScheduleData(prev => ({ ...prev, selectedDate: data, selectedTimes: [] }));
     setShowCalendar(false);
     setShowTimeSlots(true);
@@ -216,9 +209,9 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
           </div>
 
           {/* Score Circle and Details */}
-          <div className="grid lg:grid-cols-2 gap-12 items-center mb-12">
+          <div className="flex justify-center mb-12">
             {/* Score Visualization */}
-            <div className="flex justify-center">
+            <div>
               <div className="relative">
                 <svg width="280" height="280" className="transform -rotate-90">
                   {/* Background circle */}
@@ -260,69 +253,96 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Score Details */}
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Assessment Summary</h2>
-                <div className="bg-gray-50 rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-gray-700 font-medium">Digital Readiness Level</span>
-                    <span className="font-bold text-xl" style={{ color: scoreColor }}>
-                      {maturityLevel}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="h-3 rounded-full transition-all duration-1000 ease-out"
-                      style={{ 
-                        width: `${score}%`,
-                        backgroundColor: scoreColor
-                      }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-sm text-gray-500 mt-2">
-                    <span>Basic</span>
-                    <span>Emerging</span>
-                    <span>Established</span>
-                    <span>World Class</span>
-                  </div>
-                </div>
+          {/* Assessment Summary */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">Assessment Summary</h2>
+            <div className="bg-gray-50 rounded-xl p-6 max-w-2xl mx-auto">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-gray-700 font-medium">Digital Readiness Level</span>
+                <span className="font-bold text-xl" style={{ color: scoreColor }}>
+                  {maturityLevel}
+                </span>
               </div>
-
-              {/* Key Recommendations */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Recommendations</h3>
-                <div className="space-y-3">
-                  {recommendations.map((recommendation, index) => (
-                    <div key={index} className="flex items-start space-x-3">
-                      <div 
-                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{ backgroundColor: scoreColor }}
-                      >
-                        <span className="text-white text-xs font-bold">{index + 1}</span>
-                      </div>
-                      <p className="text-gray-700 text-sm leading-relaxed">{recommendation}</p>
-                    </div>
-                  ))}
-                </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div 
+                  className="h-3 rounded-full transition-all duration-1000 ease-out"
+                  style={{ 
+                    width: `${score.overallScore}%`,
+                    backgroundColor: scoreColor
+                  }}
+                />
+              </div>
+              <div className="relative text-sm text-gray-500 mt-2">
+                <span className="absolute text-xs" style={{ left: '12.5%', transform: 'translateX(-50%)' }}>Basic</span>
+                <span className="absolute text-xs" style={{ left: '37.5%', transform: 'translateX(-50%)' }}>Emerging</span>
+                <span className="absolute text-xs" style={{ left: '62.5%', transform: 'translateX(-50%)' }}>Established</span>
+                <span className="absolute text-xs whitespace-nowrap" style={{ left: '87.5%', transform: 'translateX(-50%)' }}>World Class</span>
               </div>
             </div>
           </div>
 
+          {/* Priority Recommendation */}
+          {recommendations.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Priority Focus Area</h3>
+              <div 
+                className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-l-4 max-w-4xl mx-auto"
+                style={{ borderColor: '#05f' }}
+              >
+                <div className="flex items-start space-x-4">
+                  <div 
+                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
+                    style={{ backgroundColor: scoreColor }}
+                  >
+                    <span className="text-white text-sm font-bold">!</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Key Priority</h4>
+                    <p className="text-gray-700 leading-relaxed">{recommendations[0]}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Focus Area Recommendations */}
+          {recommendations.length > 1 && (
+            <div className="mb-12">
+              <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">Focus Area Recommendations</h3>
+              <div className="grid md:grid-cols-2 gap-4 max-w-6xl mx-auto">
+                {recommendations.slice(1).map((recommendation, index) => (
+                  <div key={index} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow duration-200">
+                    <div className="flex items-start space-x-3">
+                      <div 
+                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
+                        style={{ backgroundColor: scoreColor }}
+                      >
+                        <span className="text-white text-xs font-bold">{index + 1}</span>
+                      </div>
+                      <p className="text-gray-700 text-sm leading-relaxed flex-1">{recommendation}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="flex justify-center gap-4 mb-8">
             {/* <button
               onClick={handleScheduleClick}
-              className="flex items-center justify-center space-x-2 bg-white border-2 border-gray-200 text-gray-700 py-4 px-6 rounded-xl font-semibold hover:border-gray-300 hover:shadow-md transition-all duration-200"
+              className="flex items-center justify-center space-x-2 bg-white border-2 border-gray-200 text-white py-4 px-6 rounded-xl font-semibold hover:border-gray-300 hover:shadow-md transition-all duration-200"
+              style={{ backgroundColor: '#05f' }}
             >
               <CalendarIcon className="w-5 h-5" />
-              <span>Set up a Call to Discuss</span>
+              <span>Schedule a follow-up call</span>
             </button> */}
 
             <button
               onClick={onNavigateToTier2}
-              className="flex content items-center justify-center space-x-2 text-white py-4 px-6 rounded-xl font-semibold hover:opacity-90 hover:shadow-lg transition-all duration-200"
+              className="flex items-center justify-center space-x-2 text-white py-4 px-8 rounded-xl font-semibold hover:opacity-90 hover:shadow-lg transition-all duration-200"
               style={{ backgroundColor: '#05f' }}
             >
               <TrendingUp className="w-5 h-5" />
@@ -331,7 +351,7 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
 
             <button
               onClick={onRetakeAssessment}
-              className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-4 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
+              className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 py-4 px-8 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-200"
             >
               <BarChart3 className="w-5 h-5" />
               <span>Retake Assessment</span>
@@ -413,20 +433,20 @@ export function Tier1Results({ score, onNavigateToTier2, onScheduleCall, onRetak
                     <p className="text-xs text-gray-500 mb-3">
                       You can select multiple time slots to give us more options
                     </p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-4 gap-2">
                       {getAvailableTimeSlots(scheduleData.selectedDate).map((slot) => (
                         <button
                           key={slot.value}
                           type="button"
                           onClick={() => handleTimeSelect(slot.value)}
-                          className={`p-3 text-sm font-medium rounded-lg border transition-all duration-200 ${
+                          className={`p-2 text-xs font-medium rounded-lg border transition-all duration-200 ${
                             scheduleData.selectedTimes.includes(slot.value)
                               ? 'bg-primary text-white border-primary'
                               : 'bg-white text-gray-700 border-gray-300 hover:border-primary hover:bg-blue-50'
                           }`}
                         >
                           <div className="flex items-center justify-center space-x-1">
-                            <Clock className="w-3 h-3" />
+                            <Clock className="w-3 h-3 flex-shrink-0" />
                             <span>{slot.label}</span>
                           </div>
                         </button>

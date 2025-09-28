@@ -29,8 +29,15 @@ export function getCompanyNameFromDomain(domain: string): string | null {
 }
 
 export const getScoreColor = (score: number): string => {
-  if (score >= 85) return "#10b981"; // emerald-500 - World Class (green)
-  if (score >= 70) return "#3b82f6"; // blue-500 - Established (blue)
-  if (score >= 50) return "#f59e0b"; // amber-500 - Emerging (orange)
+  if (score >= 87.5) return "#10b981"; // emerald-500 - World Class (green)
+  if (score >= 62.5) return "#3b82f6"; // blue-500 - Established (blue)
+  if (score >= 37.5) return "#f59e0b"; // amber-500 - Emerging (orange)
   return "#ef4444"; // red-500 - Basic (red)
+};
+
+export const getMaturityLevel = (score: number): string => {
+  if (score >= 87.5) return "World Class";
+  if (score >= 62.5) return "Established";
+  if (score >= 37.5) return "Emerging";
+  return "Basic";
 };

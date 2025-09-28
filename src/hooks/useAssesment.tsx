@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { client, LocalSchema } from "../amplifyClient";
-import { Tier1Score, useAppContext } from "../context/AppContext"; // adjust path
+import { useAppContext } from "../context/AppContext"; // adjust path
 import { Tier1TemplateId } from "../services/defaultQuestions";
+import { Tier1ScoreResult } from "../utils/scoreCalculator";
 
 type Tier1AssessmentRequest = {
   user?: LocalSchema["User"]["type"];
   company?: LocalSchema["Company"]["type"];
-  tier1Score?: Tier1Score;
+  tier1Score?: Tier1ScoreResult;
   tier1Responses?: Record<string, string>;
 };
 
@@ -38,7 +39,7 @@ export function useAssessment() {
           type: "SET_TIER1_SCORE",
           payload:
             typeof tier1Instances[0]?.score === "string"
-              ? (JSON.parse(tier1Instances[0]?.score) as Tier1Score)
+              ? (JSON.parse(tier1Instances[0]?.score) as Tier1ScoreResult)
               : null,
         });
       }
@@ -112,7 +113,7 @@ export function useAssessment() {
     }: {
       assessmentId: string;
       updatedResponses: any;
-      updatedScores: Tier1Score;
+      updatedScores: Tier1ScoreResult;
     }) => {
       try {
         setSubmittingAssesment(true);

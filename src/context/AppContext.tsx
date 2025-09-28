@@ -1,26 +1,13 @@
-import { getCurrentUser, GetCurrentUserOutput } from "aws-amplify/auth";
+import { GetCurrentUserOutput } from "aws-amplify/auth";
 import React, {
   createContext,
-  useContext,
-  useReducer,
   ReactNode,
+  useContext,
   useEffect,
+  useReducer,
 } from "react";
-import { client, LocalSchema } from "../amplifyClient";
-import { getCompanyNameFromDomain, getDomainFromEmail } from "../utils/common";
-import { useSetUserData } from "../hooks/setUserData";
-
-export interface Tier1Score {
-  overallScore: number;
-  totalQuestions: number;
-  scoreBreakdown: {
-    basic: number;
-    emerging: number;
-    established: number;
-    worldClass: number;
-  };
-  maturityLevel: string;
-}
+import { LocalSchema } from "../amplifyClient";
+import { Tier1ScoreResult } from "../utils/scoreCalculator";
 
 export interface UserData {
   name: string;
@@ -46,7 +33,7 @@ export interface AppState {
   loginNextStep: LOGIN_NEXT_STEP;
 
   // Assessment data
-  tier1Score: Tier1Score | null;
+  tier1Score: Tier1ScoreResult | null;
   tier1Responses: Record<string, string>;
 
   // UI state
@@ -65,7 +52,7 @@ export type AppAction =
       payload: UserData | null;
     }
   | { type: "SET_LOGIN_EMAIL"; payload: string }
-  | { type: "SET_TIER1_SCORE"; payload: Tier1Score | null }
+  | { type: "SET_TIER1_SCORE"; payload: Tier1ScoreResult | null }
   | { type: "SET_TIER1_RESPONSES"; payload: Record<string, string> }
   | { type: "TOGGLE_SIDEBAR" }
   | { type: "LOGIN_NEXT_STEP"; payload: LOGIN_NEXT_STEP }

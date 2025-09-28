@@ -78,14 +78,14 @@ export const TIER1_DEFAULT_QUESTIONS = [
   },
   {
     templateId: Tier1TemplateId,
-    sectionId: 'transformation',
+    sectionId: 'digitalization',
     order: 3,
     kind: 'SINGLE_CHOICE' as const,
     prompt: 'Smart Lab and Workflow Automation',
     helpText: 'What is the level of automation and digital integration in your laboratory workflows?',
     required: true,
     metadata: {
-      pillar: 'TRANSFORMATION',
+      pillar: 'DIGITALIZATION',
       dimension: 'LAB_AUTOMATION',
       tier: 'TIER1'
     },
@@ -157,7 +157,7 @@ export const TIER1_DEFAULT_QUESTIONS = [
     helpText: 'How well integrated are your R&D and manufacturing processes through digital systems?',
     required: true,
     metadata: {
-      pillar: 'TRANSFORMATION',
+      pillar: 'DIGITALIZATION',
       dimension: 'MANUFACTURING_INTEGRATION',
       tier: 'TIER1'
     },
@@ -330,14 +330,14 @@ export const TIER1_DEFAULT_QUESTIONS = [
   },
   {
     templateId: Tier1TemplateId,
-    sectionId: 'digitalization',
+    sectionId: 'value_scaling',
     order: 10,
     kind: 'SINGLE_CHOICE' as const,
     prompt: 'Supplier Ecosystem Connectivity',
     helpText: 'How digitally connected and integrated is your supplier ecosystem?',
     required: true,
     metadata: {
-      pillar: 'DIGITALIZATION',
+      pillar: 'VALUE_SCALING',
       dimension: 'SUPPLIER_CONNECTIVITY',
       tier: 'TIER1'
     },

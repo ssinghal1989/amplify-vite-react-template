@@ -58,7 +58,7 @@ function AppContent() {
 
   useEffect(() => {
     checkIfUserAlreadyLoggedIn();
-    checkAndSetupQuestions();
+    // checkAndSetupQuestions();
   }, []);
 
   const getCurrentView = (): "home" | "tier1" | "tier2" => {
@@ -135,8 +135,8 @@ function AppContent() {
     navigate("/tier1");
   };
 
-  const handleTier1Complete = async (responses: Record<string, string>) => {
-    const score = calculateTier1Score(responses);
+  const handleTier1Complete = async (responses: Record<string, string>, questions: any[]) => {
+    const score = calculateTier1Score(responses, questions);
     dispatch({ type: "SET_TIER1_RESPONSES", payload: responses });
     dispatch({
       type: "SET_TIER1_SCORE",
