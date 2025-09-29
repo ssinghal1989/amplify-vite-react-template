@@ -86,7 +86,7 @@ const formatScheduleRequestEmail = (requestData: ScheduleRequestData) => {
     ? "Tier 1 Follow-up Call"
     : "Tier 2 In-Depth Assessment";
 
-  const subject = `New ${requestType} Request - ${requestData.companyName}`;
+  const subject = `${requestType} Request - ${requestData.companyName}`;
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -119,7 +119,7 @@ const formatScheduleRequestEmail = (requestData: ScheduleRequestData) => {
   const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-          <h1 style="margin: 0; font-size: 24px;">New ${requestType} Request</h1>
+          <h1 style="margin: 0; font-size: 24px;">${requestType} Request</h1>
         </div>
         
         <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;">

@@ -17,6 +17,7 @@ import { client } from "../amplifyClient";
 import { useAppContext } from "../context/AppContext";
 import { useAssessment } from "../hooks/useAssesment";
 import { useToast } from "../context/ToastContext";
+import { useCallRequest } from "../hooks/useCallRequest";
 
 interface Tier1ResultsProps {
   score: Tier1ScoreResult;
@@ -48,6 +49,7 @@ export function Tier1Results({
   const { state } = useAppContext();
   const { userTier1Assessments } = useAssessment();
   const { showToast } = useToast();
+  const {scheduleRequest} = useCallRequest();
 
   const getRecommendations = (score: number): string[] => {
     if (score >= 85) {
@@ -195,7 +197,7 @@ export function Tier1Results({
       // onScheduleCall(scheduleData);
 
       try {
-        const { data, errors } = await client.models.ScheduleRequest.create({
+        const { data, errors } = await scheduleRequest({
           preferredDate: new Date(scheduleData?.selectedDate!)
             .toISOString()
             .split("T")[0]!,

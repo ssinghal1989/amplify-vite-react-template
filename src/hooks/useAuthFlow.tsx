@@ -1,7 +1,6 @@
 // Custom hook to handle authentication flow using Amplify
 import { useState, useCallback } from "react";
 import { signIn, signUp } from "aws-amplify/auth";
-import { client } from "../amplifyClient";
 import { checkIfUserExists } from "../utils/checkUserExistance";
 
 // Define possible next steps in the login process
@@ -79,6 +78,7 @@ export function useAuthFlow(
     },
     [updateStateAndNavigateToOtp]
   );
+  
 
   // Return the authentication handler and error state
   return { handleAuth, error, loading };

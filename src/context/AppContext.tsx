@@ -16,12 +16,21 @@ export interface UserData {
   jobTitle: string;
 }
 
+export interface Tier2FormData {
+  name: string;
+  email: string;
+  companyName: string;
+  jobTitle: string;
+  selectedDate: Date | null;
+  selectedTimes: string[];
+}
+
 export type LOGIN_NEXT_STEP = "CONFIRM_SIGNUP" | "CONFIRM_SIGNIN";
 
 export interface AppState {
   // User data
   userData: LocalSchema["User"]["type"] | null;
-  userFormData: UserData | null;
+  userFormData: UserData | Tier2FormData | null;
   loginEmail: string;
   loggedInUserDetails: GetCurrentUserOutput | null;
   isLoadingInitialData: boolean;

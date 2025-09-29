@@ -5,7 +5,7 @@ import {
   BrowserRouter as Router,
   Routes,
   useLocation,
-  useNavigate
+  useNavigate,
 } from "react-router-dom";
 import { LocalSchema } from "./amplifyClient";
 import { EmailLoginModal } from "./components/EmailLoginModal";
@@ -19,6 +19,7 @@ import { ScheduleCallData, Tier1Results } from "./components/Tier1Results";
 import { Tier2Assessment } from "./components/Tier2Assessment";
 import {
   AppProvider,
+  Tier2FormData,
   useAppContext,
   useHasCompleteProfile,
   UserData,
@@ -27,7 +28,8 @@ import { useSetUserData } from "./hooks/setUserData";
 import { useAssessment } from "./hooks/useAssesment";
 import { seedDataService } from "./services/seedDataService";
 import { calculateTier1Score } from "./utils/scoreCalculator";
-import { ToastProvider } from "./context/ToastContext";
+import { ToastProvider, useToast } from "./context/ToastContext";
+import { useCallRequest } from "./hooks/useCallRequest";
 
 function AppContent() {
   const { state, dispatch } = useAppContext();
@@ -36,6 +38,8 @@ function AppContent() {
   const hasCompleteProfile = useHasCompleteProfile();
   const { setUserData } = useSetUserData();
   const { submitTier1Assessment, fetchUserAssessments } = useAssessment();
+  const { scheduleRequest, fetchUserCallRequests } = useCallRequest();
+  const { showToast } = useToast();
 
   const checkIfUserAlreadyLoggedIn = async () => {
     try {
@@ -91,7 +95,7 @@ function AppContent() {
       navigate("/tier1-results");
     } else if (state.redirectPathAfterLogin?.includes("tier2")) {
       // Handle to redirect on result page
-      navigate("/tier2-results");
+      navigate("/tier2");
     } else {
       navigate("/");
     }
@@ -117,13 +121,60 @@ function AppContent() {
     user?: LocalSchema["User"]["type"];
     company?: LocalSchema["Company"]["type"];
   }) => {
+    const { user, company } = data;
     dispatch({ type: "SET_LOGIN_EMAIL", payload: "" });
     if (state.redirectPathAfterLogin?.includes("tier1-results")) {
       await submitTier1Assessment(data);
       await fetchUserAssessments();
+      navigate(state.redirectPathAfterLogin || "/");
+      dispatch({ type: "SET_REDIRECT_PATH_AFTER_LOGIN", payload: undefined });
     }
-    navigate(state.redirectPathAfterLogin || "/");
-    dispatch({ type: "SET_REDIRECT_PATH_AFTER_LOGIN", payload: undefined });
+    if (state.redirectPathAfterLogin?.includes("tier2")) {
+      try {
+        const tier2FormData = state.userFormData as Tier2FormData;
+        const { data } = await scheduleRequest({
+          preferredDate: new Date(tier2FormData?.selectedDate!)
+            .toISOString()
+            .split("T")[0]!,
+          preferredTimes: tier2FormData?.selectedTimes,
+          initiatorUserId: user?.id,
+          companyId: company?.id,
+          status: "PENDING",
+          type: "TIER2_REQUEST",
+          metadata: JSON.stringify({
+            userEmail: tier2FormData?.email!,
+            userName: tier2FormData?.name!,
+            companyDomain: company?.primaryDomain!,
+            companyName: tier2FormData?.companyName!,
+            userJobTitle: tier2FormData?.jobTitle!,
+          }),
+        });
+        if (data) {
+          fetchUserCallRequests();
+          navigate(state.redirectPathAfterLogin || "/");
+          dispatch({
+            type: "SET_REDIRECT_PATH_AFTER_LOGIN",
+            payload: undefined,
+          });
+          //setCurrentStep("confirmation");
+        } else {
+          showToast({
+            type: "error",
+            title: "Request Failed",
+            message: "Failed to schedule the call. Please try again.",
+            duration: 5000,
+          });
+        }
+      } catch (err) {
+        showToast({
+          type: "error",
+          title: "Request Failed",
+          message: "Failed to schedule the call. Please try again.",
+          duration: 5000,
+        });
+      }
+    }
+    // Handle tier2 assessment request
   };
 
   const handleScheduleCall = (data: ScheduleCallData) => {
@@ -135,7 +186,10 @@ function AppContent() {
     navigate("/tier1");
   };
 
-  const handleTier1Complete = async (responses: Record<string, string>, questions: any[]) => {
+  const handleTier1Complete = async (
+    responses: Record<string, string>,
+    questions: any[]
+  ) => {
     const score = calculateTier1Score(responses, questions);
     dispatch({ type: "SET_TIER1_RESPONSES", payload: responses });
     dispatch({
@@ -215,10 +269,8 @@ function AppContent() {
                   onRetakeAssessment={handleRetakeAssessment}
                 />
               </ProtectedRoute>
-            ) : (
-              // <Navigate to={"/"} state={{ from: location }} replace />
-              null
-            )
+            ) : // <Navigate to={"/"} state={{ from: location }} replace />
+            null
           }
         />
         <Route

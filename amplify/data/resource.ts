@@ -142,7 +142,12 @@ export const schema = a.schema({
       scheduledDateTime: a.datetime(), // Actual scheduled time
       meetingLink: a.string(), // Generated meeting link
       notificationsSent: a.boolean().default(false),
+      createdAt: a.datetime().default(new Date().toISOString()),
+      updatedAt: a.datetime().default(new Date().toISOString()),
     })
+    .secondaryIndexes((index) => [
+      index("initiatorUserId").sortKeys(["createdAt"]),
+    ])
     .authorization((allow) => [allow.authenticated(), allow.owner()]),
 });
 
