@@ -173,6 +173,9 @@ function AppContent() {
           duration: 5000,
         });
       }
+    } else {
+      navigate(state.redirectPathAfterLogin || "/");
+      dispatch({ type: "SET_REDIRECT_PATH_AFTER_LOGIN", payload: undefined });
     }
     // Handle tier2 assessment request
   };
