@@ -1,21 +1,21 @@
 import { getCurrentUser, signOut } from "aws-amplify/auth";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
-  Navigate,
   Route,
   BrowserRouter as Router,
   Routes,
   useLocation,
-  useNavigate,
+  useNavigate
 } from "react-router-dom";
-import { client, LocalSchema } from "./amplifyClient";
+import { LocalSchema } from "./amplifyClient";
 import { EmailLoginModal } from "./components/EmailLoginModal";
 import { HomePage } from "./components/HomePage";
 import { Layout } from "./components/Layout";
 import { LoginPage } from "./components/LoginPage";
 import { OtpVerificationPage } from "./components/OtpVerificationPage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Tier1Assessment } from "./components/Tier1Assessment";
-import { Tier1Results } from "./components/Tier1Results";
+import { ScheduleCallData, Tier1Results } from "./components/Tier1Results";
 import { Tier2Assessment } from "./components/Tier2Assessment";
 import {
   AppProvider,
@@ -27,7 +27,7 @@ import { useSetUserData } from "./hooks/setUserData";
 import { useAssessment } from "./hooks/useAssesment";
 import { seedDataService } from "./services/seedDataService";
 import { calculateTier1Score } from "./utils/scoreCalculator";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ToastProvider } from "./context/ToastContext";
 
 function AppContent() {
   const { state, dispatch } = useAppContext();
@@ -126,9 +126,9 @@ function AppContent() {
     dispatch({ type: "SET_REDIRECT_PATH_AFTER_LOGIN", payload: undefined });
   };
 
-  const handleScheduleCall = () => {
+  const handleScheduleCall = (data: ScheduleCallData) => {
     // In a real app, this would open a calendar booking system
-    alert("Calendar booking system would open here");
+    console.log("Calendar booking system would open here", data);
   };
 
   const handleRetakeAssessment = () => {
@@ -254,9 +254,11 @@ function AppContent() {
 function App() {
   return (
     <AppProvider>
-      <Router>
-        <AppContent />
-      </Router>
+      <ToastProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </ToastProvider>
     </AppProvider>
   );
 }

@@ -8,7 +8,6 @@ import { useAssessment } from "../hooks/useAssesment";
 import { useLoader } from "../hooks/useLoader";
 import { Tier1TemplateId } from "../services/defaultQuestions";
 import { questionsService } from "../services/questionsService";
-import { calculateTier1Score } from "../utils/scoreCalculator";
 import { Loader } from "./ui/Loader";
 import { LoadingButton } from "./ui/LoadingButton";
 import { getScoreColor } from "../utils/common";

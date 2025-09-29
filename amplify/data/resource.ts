@@ -15,6 +15,7 @@ export const schema = a.schema({
       createdAt: a.datetime().default(new Date().toISOString()),
       updatedAt: a.datetime().default(new Date().toISOString()),
       assessmentInstances: a.hasMany("AssessmentInstance", "companyId"),
+      callScheduleRequest: a.hasMany("ScheduleRequest", "companyId")
     })
     .identifier(["id"])
     .authorization((allow) => [
@@ -28,12 +29,13 @@ export const schema = a.schema({
       email: a.email().required(),
       name: a.string(),
       jobTitle: a.string(),
-      role: a.enum(['user', 'admin', 'superAdmin']),
+      role: a.enum(["user", "admin", "superAdmin"]),
       companyId: a.id(),
       company: a.belongsTo("Company", "companyId"),
       createdAt: a.datetime().default(new Date().toISOString()),
       updatedAt: a.datetime().default(new Date().toISOString()),
       assessmentInstances: a.hasMany("AssessmentInstance", "initiatorUserId"),
+      callScheduleRequest: a.hasMany("ScheduleRequest", "initiatorUserId")
     })
     .identifier(["id"])
     .authorization((allow) => [allow.authenticated()]),
@@ -120,10 +122,28 @@ export const schema = a.schema({
       //assets: a.hasMany('Asset', 'assessmentInstanceId'),
     })
     .secondaryIndexes((index) => [
-      index('initiatorUserId').sortKeys(['createdAt'])
+      index("initiatorUserId").sortKeys(["createdAt"]),
     ])
     .authorization((allow) => [allow.authenticated(), allow.owner()]),
-    
+
+  ScheduleRequest: a
+    .model({
+      type: a.enum(["TIER1_FOLLOWUP", "TIER2_REQUEST"]),
+      initiatorUserId: a.id(),
+      companyId: a.id(),
+      preferredDate: a.date().required(),
+      preferredTimes: a.string().array().required(), // Store as array of time strings
+      remarks: a.string(),
+      company: a.belongsTo("Company", "companyId"),
+      metadata: a.json(),
+      initiator: a.belongsTo("User", "initiatorUserId"),
+      status: a.enum(["PENDING", "SCHEDULED", "COMPLETED", "CANCELLED"]),
+      assessmentInstanceId: a.id(), // Link to assessment if applicable
+      scheduledDateTime: a.datetime(), // Actual scheduled time
+      meetingLink: a.string(), // Generated meeting link
+      notificationsSent: a.boolean().default(false),
+    })
+    .authorization((allow) => [allow.authenticated(), allow.owner()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -138,3 +158,4 @@ export const data = defineData({
     },
   },
 });
+
