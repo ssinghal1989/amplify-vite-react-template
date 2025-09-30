@@ -384,7 +384,7 @@ export function Tier2Assessment({ onNavigateToTier }: Tier2AssessmentProps) {
             </div>
 
             <button
-              onClick={() => onNavigateToTier("tier1")}
+              onClick={() => navigate("/")}
               className="bg-primary text-white py-3 px-8 rounded-xl font-semibold hover:opacity-90 transition-all duration-200"
             >
               Back to Home

@@ -242,29 +242,7 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
                   ) as Tier1ScoreResult;
                   const recommendations = scoreData?.pillarScores
                     ? generateRecommendations(scoreData)
-                    : [
-                        scoreData.overallScore >= 85
-                          ? "Continue to innovate and lead in digital transformation"
-                          : scoreData.overallScore >= 70
-                          ? "Focus on scaling successful digital initiatives"
-                          : scoreData.overallScore >= 50
-                          ? "Prioritize foundational digital infrastructure"
-                          : "Begin with basic digital transformation initiatives",
-                        scoreData.overallScore >= 85
-                          ? "Share best practices across the organization"
-                          : scoreData.overallScore >= 70
-                          ? "Strengthen data governance and integration"
-                          : scoreData.overallScore >= 50
-                          ? "Develop digital skills across teams"
-                          : "Focus on data standardization and integration",
-                        scoreData.overallScore >= 85
-                          ? "Explore advanced AI and automation opportunities"
-                          : scoreData.overallScore >= 70
-                          ? "Invest in advanced analytics capabilities"
-                          : scoreData.overallScore >= 50
-                          ? "Establish clear data governance frameworks"
-                          : "Build digital culture and leadership support",
-                      ];
+                    : [];
 
                   return (
                     <div className="space-y-3">
@@ -302,7 +280,7 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
                             Additional Focus Areas:
                           </h5>
                           <div className="grid gap-3">
-                            {recommendations.map((recommendation, index) => (
+                            {recommendations.splice(1, 10).map((recommendation, index) => (
                               <div
                                 key={index}
                                 className="bg-gray-50 rounded-lg p-3 border border-gray-200"
