@@ -1,21 +1,25 @@
 import {
   BarChart3,
   Calendar,
-  TrendingUp,
   ChevronDown,
   ChevronUp,
   Lightbulb,
+  TrendingUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAssessment } from "../hooks/useAssesment";
 import { useLoader } from "../hooks/useLoader";
 import { Tier1TemplateId } from "../services/defaultQuestions";
 import { questionsService } from "../services/questionsService";
+import { formatStringToTitle, getScoreColor } from "../utils/common";
+import {
+  generateRecommendations,
+  getMaturityColor,
+  getPillarColor,
+} from "../utils/recommendationsGenerator";
+import { Tier1ScoreResult } from "../utils/scoreCalculator";
 import { Loader } from "./ui/Loader";
 import { LoadingButton } from "./ui/LoadingButton";
-import { getScoreColor, getMaturityLevel } from "../utils/common";
-import { generateRecommendations } from "../utils/recommendationsGenerator";
-import { Tier1ScoreResult } from "../utils/scoreCalculator";
 
 interface Tier1AssessmentProps {
   onComplete: (responses: Record<string, string>, questions: any[]) => void;
@@ -264,10 +268,10 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
                             </div>
                             <div>
                               <h5 className="font-semibold text-gray-900 mb-1">
-                                Priority Focus
+                                Priority Focus ({formatStringToTitle(recommendations[0].pillar || '')})
                               </h5>
                               <p className="text-gray-700 text-sm leading-relaxed">
-                                {recommendations[0]}
+                                {recommendations[0].text}
                               </p>
                             </div>
                           </div>
@@ -281,23 +285,44 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
                             Additional Focus Areas:
                           </h5>
                           <div className="grid gap-3">
-                            {recommendations.splice(1, 10).map((recommendation, index) => (
-                              <div
-                                key={index}
-                                className="bg-gray-50 rounded-lg p-3 border border-gray-200"
-                              >
-                                <div className="flex items-start space-x-3">
-                                  <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: scoreColor }}>
-                                    <span className="text-white text-xs font-bold">
-                                      {index + 1}
-                                    </span>
+                            {recommendations
+                              .splice(1, 10)
+                              .sort((a, b) => {
+                                const aIndex = a.maturityLevel ? maturityOrder.indexOf(a.maturityLevel) : 999;
+                                const bIndex = b.maturityLevel ? maturityOrder.indexOf(b.maturityLevel) : 999;
+                                return aIndex - bIndex;
+                              })
+                              .map((recommendation, index) => (
+                                <div
+                                  key={index}
+                                  className="bg-gray-50 rounded-lg p-3 border border-gray-200"
+                                >
+                                  <div className="flex items-start space-x-3">
+                                    <div
+                                      className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                                      style={{
+                                        backgroundColor:
+                                          recommendation.maturityLevel
+                                            ? getMaturityColor(
+                                                recommendation.maturityLevel
+                                              )
+                                            : recommendation.pillar
+                                            ? getPillarColor(
+                                                recommendation.pillar
+                                              )
+                                            : scoreColor,
+                                      }}
+                                    >
+                                      <span className="text-white text-xs font-bold">
+                                        {index + 1}
+                                      </span>
+                                    </div>
+                                    <p className="text-gray-700 text-sm leading-relaxed flex-1">
+                                      {recommendation.text}
+                                    </p>
                                   </div>
-                                  <p className="text-gray-700 text-sm leading-relaxed flex-1">
-                                    {recommendation}
-                                  </p>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
                           </div>
                         </div>
                       )}
