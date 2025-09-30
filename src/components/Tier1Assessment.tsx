@@ -243,6 +243,7 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
                   const recommendations = scoreData?.pillarScores
                     ? generateRecommendations(scoreData)
                     : [];
+                  const scoreColor = getScoreColor(scoreData.overallScore);
 
                   return (
                     <div className="space-y-3">
@@ -255,7 +256,7 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
                           <div className="flex items-start space-x-3">
                             <div
                               className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
-                              style={{ backgroundColor: "#05f" }}
+                              style={{ backgroundColor: scoreColor }}
                             >
                               <span className="text-white text-xs font-bold">
                                 !
@@ -286,7 +287,7 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
                                 className="bg-gray-50 rounded-lg p-3 border border-gray-200"
                               >
                                 <div className="flex items-start space-x-3">
-                                  <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: scoreColor }}>
                                     <span className="text-white text-xs font-bold">
                                       {index + 1}
                                     </span>

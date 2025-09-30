@@ -4,11 +4,12 @@ import { Sidebar } from './Sidebar';
 
 interface LayoutProps {
   children: React.ReactNode;
-  currentView: 'home' | 'tier1' | 'tier2';
+  currentView: 'home' | 'tier1' | 'tier2' | 'admin';
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
   onNavigateHome: () => void;
   onNavigateToTier: (tier: 'tier1' | 'tier2') => void;
+  onNavigateToAdmin?: () => void;
   onLogin?: () => void;
   onLogout?: () => void;
   userName?: string;
@@ -21,6 +22,7 @@ export function Layout({
   toggleSidebar, 
   onNavigateHome, 
   onNavigateToTier,
+  onNavigateToAdmin,
   onLogin,
   onLogout,
   userName
@@ -40,6 +42,7 @@ export function Layout({
           toggleSidebar={toggleSidebar}
           onNavigateHome={onNavigateHome}
           onNavigateToTier={onNavigateToTier}
+          onNavigateToAdmin={onNavigateToAdmin}
         />
         {children}
       </div>

@@ -7,7 +7,7 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import { LocalSchema } from "./amplifyClient";
+import { client, LocalSchema } from "./amplifyClient";
 import { EmailLoginModal } from "./components/EmailLoginModal";
 import { HomePage } from "./components/HomePage";
 import { Layout } from "./components/Layout";
@@ -17,6 +17,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Tier1Assessment } from "./components/Tier1Assessment";
 import { ScheduleCallData, Tier1Results } from "./components/Tier1Results";
 import { Tier2Assessment } from "./components/Tier2Assessment";
+import { AdminPanel } from "./components/AdminPanel";
 import {
   AppProvider,
   Tier2FormData,
@@ -30,6 +31,7 @@ import { seedDataService } from "./services/seedDataService";
 import { calculateTier1Score } from "./utils/scoreCalculator";
 import { ToastProvider, useToast } from "./context/ToastContext";
 import { useCallRequest } from "./hooks/useCallRequest";
+import { Tier2AssessmentOld } from "./components/Tier2AssessmentOld";
 
 function AppContent() {
   const { state, dispatch } = useAppContext();
@@ -60,15 +62,26 @@ function AppContent() {
     await seedDataService.initializeDefaultQuestions();
   };
 
+  const updateUserRole = async () => {
+    if (state?.userData?.id) {
+      await client.models.User.update({
+        id: state.userData.id,
+        role: 'user',
+      })
+    }
+  }
+
   useEffect(() => {
     checkIfUserAlreadyLoggedIn();
     // checkAndSetupQuestions();
+    updateUserRole();
   }, []);
 
-  const getCurrentView = (): "home" | "tier1" | "tier2" => {
+  const getCurrentView = (): "home" | "tier1" | "tier2" | "admin" => {
     const path = location.pathname;
     if (path === "/tier1") return "tier1";
     if (path === "/tier2") return "tier2";
+    if (path === "/admin") return "admin";
     return "home";
   };
 
@@ -78,6 +91,10 @@ function AppContent() {
 
   const navigateHome = () => {
     navigate("/");
+  };
+
+  const navigateToAdmin = () => {
+    navigate("/admin");
   };
 
   const toggleSidebar = () => {
@@ -222,6 +239,7 @@ function AppContent() {
       toggleSidebar={toggleSidebar}
       onNavigateHome={navigateHome}
       onNavigateToTier={navigateToTier}
+      onNavigateToAdmin={navigateToAdmin}
       onLogin={handleHeaderLogin}
       onLogout={handleLogout}
       userName={state.userData?.name || state.userData?.email || ""}
@@ -238,10 +256,18 @@ function AppContent() {
         <Route
           path="/tier2"
           element={
-            <Tier2Assessment
-              onNavigateToTier={navigateToTier}
-              onShowLogin={() => navigate("/login")}
-            />
+            // <Tier2Assessment
+            //   onNavigateToTier={navigateToTier}
+            // />
+            <Tier2AssessmentOld />
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requireAuth={true} redirectTo="/">
+              <AdminPanel />
+            </ProtectedRoute>
           }
         />
         <Route
