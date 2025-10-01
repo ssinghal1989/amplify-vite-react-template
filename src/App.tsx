@@ -65,7 +65,7 @@ function AppContent() {
     if (state?.userData?.id) {
       await client.models.User.update({
         id: state.userData.id,
-        role: 'user',
+        role: 'admin',
       })
     }
   }
@@ -73,7 +73,7 @@ function AppContent() {
   useEffect(() => {
     checkIfUserAlreadyLoggedIn();
     // checkAndSetupQuestions();
-    updateUserRole();
+    // updateUserRole();
   }, []);
 
   const getCurrentView = (): "home" | "tier1" | "tier2" | "admin" => {
