@@ -7,6 +7,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAssessment } from "../hooks/useAssesment";
 import { useLoader } from "../hooks/useLoader";
 import { Tier1TemplateId } from "../services/defaultQuestions";
@@ -20,6 +21,10 @@ import {
 import { Tier1ScoreResult } from "../utils/scoreCalculator";
 import { Loader } from "./ui/Loader";
 import { LoadingButton } from "./ui/LoadingButton";
+import { ScheduleCallModal, ScheduleCallData } from "./ui/ScheduleCallModal";
+import { useAppContext } from "../context/AppContext";
+import { useCallRequest } from "../hooks/useCallRequest";
+import { useToast } from "../context/ToastContext";
 
 interface Tier1AssessmentProps {
   onComplete: (responses: Record<string, string>, questions: any[]) => void;
@@ -28,6 +33,10 @@ interface Tier1AssessmentProps {
 const maturityOrder = ["BASIC", "EMERGING", "ESTABLISHED", "WORLD_CLASS"];
 
 export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
+  const navigate = useNavigate();
+  const { state } = useAppContext();
+  const { scheduleRequest } = useCallRequest();
+  const { showToast } = useToast();
   const { isLoading: questionsLoading, withLoading: withQuestionsLoading } =
     useLoader();
 
@@ -36,9 +45,68 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
     Record<string, string>
   >({});
   const [showRecommendations, setShowRecommendations] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const { userTier1Assessments, submittingAssesment, setSubmittingAssesment } =
     useAssessment();
 
+  const handleRequestTier2 = () => {
+    navigate('/tier2');
+  };
+
+  const handleScheduleCall = () => {
+    setShowScheduleModal(true);
+  };
+
+  const handleScheduleSubmit = async (data: ScheduleCallData) => {
+    try {
+      const { data: result, errors } = await scheduleRequest({
+        preferredDate: new Date(data.selectedDate!)
+          .toISOString()
+          .split("T")[0]!,
+        preferredTimes: data.selectedTimes,
+        initiatorUserId: state.userData?.id,
+        companyId: state.company?.id,
+        status: "PENDING",
+        type: "TIER1_FOLLOWUP",
+        remarks: data.remarks,
+        assessmentInstanceId: userTier1Assessments?.[0]?.id,
+        metadata: JSON.stringify({
+          userEmail: state.userData?.email!,
+          userName: state.userData?.name!,
+          companyDomain: state.company?.primaryDomain!,
+          companyName: state.company?.name!,
+          userJobTitle: state.userData?.jobTitle!,
+          assessmentScore: userTier1Assessments?.[0] 
+            ? JSON.parse(userTier1Assessments[0].score).overallScore 
+            : 0,
+        }),
+      });
+
+      if (result) {
+        showToast({
+          type: "success",
+          title: "Follow-up Call Requested!",
+          message:
+            "We've received your request and will contact you soon to schedule your follow-up call.",
+          duration: 6000,
+        });
+      } else {
+        showToast({
+          type: "error",
+          title: "Request Failed",
+          message: "Failed to schedule the call. Please try again.",
+          duration: 5000,
+        });
+      }
+    } catch (err) {
+      showToast({
+        type: "error",
+        title: "Request Failed",
+        message: "Failed to schedule the call. Please try again.",
+        duration: 5000,
+      });
+    }
+  };
   // Load questions from database on component mount
   useEffect(() => {
     loadQuestionsFromDatabase();
@@ -161,18 +229,17 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
     <main className="flex-1 p-8">
       <div className="max-w-none mx-8">
         {/* Previous Assessment Results */}
-        {/* Previous Attempt Score Card */}
-        {!!firstPreviousAssessment && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 shadow-sm border border-blue-200 mb-8">
-            <div className="flex items-center justify-between">
+        {firstPreviousAssessment && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 mb-8 border border-blue-200">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-4">
                 <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg"
                   style={{
                     backgroundColor: getScoreColor(
                       JSON.parse(firstPreviousAssessment.score).overallScore
                     ),
                   }}
+                  className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg"
                 >
                   {JSON.parse(firstPreviousAssessment.score).overallScore}
                 </div>
@@ -207,21 +274,34 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
                 </div>
               </div>
 
-              {/* Recommendations Toggle Button */}
-              <button
-                onClick={() => setShowRecommendations(!showRecommendations)}
-                className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-sm"
-              >
-                <Lightbulb className="w-4 h-4 text-amber-600" />
-                <span className="text-gray-700 font-medium">
-                  {showRecommendations ? "Hide" : "Show"} Recommendations
-                </span>
-                {showRecommendations ? (
-                  <ChevronUp className="w-4 h-4 text-gray-600" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-gray-600" />
+              <div className="flex items-center space-x-3">
+                {/* Schedule a follow-up call Button - only show if user has completed assessment */}
+                {!!firstPreviousAssessment && (
+                  <button
+                    onClick={handleScheduleCall}
+                    className="flex items-center space-x-2 bg-primary text-white py-2 px-4 rounded-lg font-semibold hover:opacity-90 transition-all duration-200"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span>Schedule a follow-up call</span>
+                  </button>
                 )}
-              </button>
+
+                {/* Recommendations Toggle Button */}
+                <button
+                  onClick={() => setShowRecommendations(!showRecommendations)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-sm"
+                >
+                  <Lightbulb className="w-4 h-4 text-amber-600" />
+                  <span className="text-gray-700 font-medium">
+                    {showRecommendations ? "Hide" : "Show"} Recommendations
+                  </span>
+                  {showRecommendations ? (
+                    <ChevronUp className="w-4 h-4 text-gray-600" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-gray-600" />
+                  )}
+                </button>
+              </div>
             </div>
             <div className="mt-4 bg-white/60 rounded-lg p-3">
               <p className="text-sm text-gray-700">
@@ -344,12 +424,21 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
               Tier 1 Assessment
             </h2>
             <p className="text-black mb-6">
-              Please click the cells that apply to your organization in the area
-              below. Once you have selected all your responses, please click
-              submit to continue.
+              Please answer all questions to complete your assessment.
             </p>
 
-            <div className="flex justify-end mb-6">
+            <div className="flex justify-between items-center mb-6">
+              {/* Request In-Depth Assessment Button - only show if user has completed assessment */}
+              {!!firstPreviousAssessment && (
+                <button
+                  onClick={handleRequestTier2}
+                  className="flex items-center space-x-2 bg-primary text-white py-2 px-4 rounded-lg font-semibold hover:opacity-90 transition-all duration-200"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Request In-Depth Assessment</span>
+                </button>
+              )}
+
               <LoadingButton
                 onClick={handleSubmit}
                 loading={submittingAssesment}
@@ -435,6 +524,14 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
           </div>
         </div>
       </div>
+
+      {/* Schedule Call Modal */}
+      <ScheduleCallModal
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        onSubmit={handleScheduleSubmit}
+        title="Schedule a Follow-up Call"
+      />
     </main>
   );
 }
