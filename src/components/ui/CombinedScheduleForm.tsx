@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
-import {
-  X,
-  User,
-  Mail,
-  Building,
-  Briefcase,
-  CalendarIcon,
-  Clock,
-  ArrowRight,
-} from 'lucide-react';
+import { X, User, Mail, Building, Briefcase, Calendar as CalendarIcon, Clock, ArrowRight } from 'lucide-react';
 import { LoadingButton } from './LoadingButton';
 import { useLoader } from '../../hooks/useLoader';
 import 'react-calendar/dist/Calendar.css';
@@ -174,7 +165,7 @@ export function CombinedScheduleForm({
 
     await withLoading(async () => {
       await onSubmit(formData);
-      //handleClose();
+      handleClose();
     });
   };
 

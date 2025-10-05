@@ -28,14 +28,15 @@ export function Layout({
   userName
 }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header 
         title="Albert Invent | Digital Readiness Assessment" 
         onLogin={onLogin}
         onLogout={onLogout}
         userName={userName}
+        onToggleSidebar={toggleSidebar}
       />
-      <div className="flex min-h-[calc(100vh-80px)]">
+      <div className="flex flex-1 relative overflow-hidden">
         <Sidebar
           currentView={currentView}
           sidebarCollapsed={sidebarCollapsed}
@@ -44,7 +45,17 @@ export function Layout({
           onNavigateToTier={onNavigateToTier}
           onNavigateToAdmin={onNavigateToAdmin}
         />
-        {children}
+        <div className="flex-1 min-w-0 overflow-auto">
+          {children}
+        </div>
+        
+        {/* Mobile overlay when sidebar is open */}
+        {!sidebarCollapsed && (
+          <div 
+            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={toggleSidebar}
+          />
+        )}
       </div>
     </div>
   );
