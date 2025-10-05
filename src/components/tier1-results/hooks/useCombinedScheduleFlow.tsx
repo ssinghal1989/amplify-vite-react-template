@@ -14,8 +14,7 @@ export function useCombinedScheduleFlow(score: any) {
   
   const [showCombinedForm, setShowCombinedForm] = useState(false);
   const [showCombinedOtp, setShowCombinedOtp] = useState(false);
-  const [combinedFormData, setCombinedFormData] =
-    useState<CombinedScheduleData | null>(null);
+  const [combinedFormData, setCombinedFormData] = useState<CombinedScheduleData | null>(null);
   const [isAuthInProgress, setIsAuthInProgress] = useState(false);
 
   // Log state changes
@@ -29,9 +28,13 @@ export function useCombinedScheduleFlow(score: any) {
   }, [showCombinedForm, showCombinedOtp, combinedFormData, isAuthInProgress]);
 
   const { showToast } = useToast();
-  const { dispatch } = useAppContext();
+  const { state, dispatch } = useAppContext();
   const { scheduleRequest } = useCallRequest();
-  const { userTier1Assessments } = useAssessment();
+  const { 
+    userTier1Assessments, 
+    linkAnonymousAssessment, 
+    findAndLinkAnonymousAssessments 
+  } = useAssessment();
 
   const updateStateAndNavigateToOtp = (nextStep: LOGIN_NEXT_STEP) => {
     console.log("🔐 [updateStateAndNavigateToOtp] Called with nextStep:", nextStep);
@@ -92,6 +95,7 @@ export function useCombinedScheduleFlow(score: any) {
       console.log("🚀 [handleCombinedFormSubmit] Starting auth flow");
       setIsAuthInProgress(true);
       console.log("🔄 [handleCombinedFormSubmit] Set isAuthInProgress to true");
+      
       try {
         dispatch({ type: "SET_LOGIN_EMAIL", payload: data.email });
         console.log("📧 [handleCombinedFormSubmit] Dispatched SET_LOGIN_EMAIL:", data.email);
@@ -101,7 +105,8 @@ export function useCombinedScheduleFlow(score: any) {
       } catch (error) {
         console.error("❌ [handleCombinedFormSubmit] Error in auth flow:", error);
         setIsAuthInProgress(false);
-        console.log("🔄 [handleCombinedFormSubmit] Reset isAuthInProgress to false due to error");
+        setCombinedFormData(null);
+        console.log("🔄 [handleCombinedFormSubmit] Reset state due to auth error");
         showToast({
           type: "error",
           title: "Authentication Error",
@@ -112,7 +117,8 @@ export function useCombinedScheduleFlow(score: any) {
     } catch (error) {
       console.error("❌ [handleCombinedFormSubmit] Error during combined form submission:", error);
       setIsAuthInProgress(false);
-      console.log("🔄 [handleCombinedFormSubmit] Reset isAuthInProgress to false due to outer error");
+      setCombinedFormData(null);
+      console.log("🔄 [handleCombinedFormSubmit] Reset state due to outer error");
       showToast({
         type: "error",
         title: "Error",
@@ -160,11 +166,47 @@ export function useCombinedScheduleFlow(score: any) {
         return;
       }
 
+      // CRITICAL: Link the current anonymous assessment with the new user
+      console.log("🔗 [handleCombinedOtpVerification] Attempting to link anonymous assessment", {
+        userId: user.id,
+        companyId: company.id,
+        hasAnonymousAssessmentId: !!state.anonymousAssessmentId
+      });
+      
+      let linkedAssessmentId = null;
+      
+      if (state.anonymousAssessmentId) {
+        console.log("📋 [handleCombinedOtpVerification] Linking specific anonymous assessment:", state.anonymousAssessmentId);
+        try {
+          const linkedAssessment = await linkAnonymousAssessment(
+            state.anonymousAssessmentId,
+            user.id,
+            company.id
+          );
+          linkedAssessmentId = linkedAssessment?.id;
+          console.log("✅ [handleCombinedOtpVerification] Successfully linked anonymous assessment:", linkedAssessmentId);
+        } catch (linkError) {
+          console.error("❌ [handleCombinedOtpVerification] Error linking specific anonymous assessment:", linkError);
+        }
+      } else {
+        console.log("🔍 [handleCombinedOtpVerification] No specific anonymous assessment ID, searching by device fingerprint");
+        try {
+          const linkedAssessments = await findAndLinkAnonymousAssessments(user.id, company.id);
+          if (linkedAssessments.length > 0) {
+            linkedAssessmentId = linkedAssessments[0].id;
+            console.log("✅ [handleCombinedOtpVerification] Successfully linked assessments via device fingerprint:", linkedAssessments.length);
+          }
+        } catch (linkError) {
+          console.error("❌ [handleCombinedOtpVerification] Error linking assessments via device fingerprint:", linkError);
+        }
+      }
+
       console.log("📅 [handleCombinedOtpVerification] Creating schedule request", {
         userId: user.id,
         companyId: company.id,
         preferredDate: combinedFormData.selectedDate,
-        timesCount: combinedFormData.selectedTimes.length
+        timesCount: combinedFormData.selectedTimes.length,
+        linkedAssessmentId
       });
       
       // Create the schedule request with the combined form data
@@ -178,7 +220,7 @@ export function useCombinedScheduleFlow(score: any) {
         status: "PENDING",
         type: "TIER1_FOLLOWUP",
         remarks: combinedFormData.remarks,
-        assessmentInstanceId: userTier1Assessments?.[0]?.id,
+        assessmentInstanceId: linkedAssessmentId || userTier1Assessments?.[0]?.id,
         metadata: JSON.stringify({
           userEmail: combinedFormData.email,
           userName: combinedFormData.name,
@@ -186,6 +228,8 @@ export function useCombinedScheduleFlow(score: any) {
           companyName: combinedFormData.companyName,
           userJobTitle: combinedFormData.jobTitle,
           assessmentScore: score.overallScore,
+          wasAnonymous: !!state.anonymousAssessmentId,
+          linkedAssessmentId: linkedAssessmentId
         }),
       });
 
