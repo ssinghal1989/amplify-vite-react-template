@@ -28,7 +28,6 @@ export function Tier2Assessment({ onNavigateToTier }: Tier2AssessmentProps) {
 
   // const handleCompleteAssessment = (responses: Record<string, string>) => {
   //   // Handle Tier 2 assessment completion
-  //   console.log("Tier 2 assessment completed:", responses);
   // };
 
   // Commented out for future use - Full Tier 2 Assessment Flow

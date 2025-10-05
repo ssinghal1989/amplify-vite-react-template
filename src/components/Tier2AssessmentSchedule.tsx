@@ -194,7 +194,6 @@ export function Tier2AssessmentSchedule({ onBack }: Tier2AssessmentScheduleProps
       if (data) {
         fetchUserCallRequests();
       } else {
-        console.log("Error", errors);
         showToast({
           type: "error",
           title: "Request Failed",
