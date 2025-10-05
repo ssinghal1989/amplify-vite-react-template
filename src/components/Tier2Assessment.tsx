@@ -1,345 +1,90 @@
-import {
-  BarChart3,
-  Calendar,
-  TrendingUp,
-  ChevronDown,
-  ChevronUp,
-  Lightbulb,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useAssessment } from "../hooks/useAssesment";
-import { useLoader } from "../hooks/useLoader";
-import { Tier1TemplateId } from "../services/defaultQuestions";
-import { questionsService } from "../services/questionsService";
-import { Loader } from "./ui/Loader";
-import { LoadingButton } from "./ui/LoadingButton";
-import { getScoreColor, getMaturityLevel } from "../utils/common";
-import { RecommendationsPanel } from "./ui/RecommendationsPanel";
-import { Tier1ScoreResult } from "../utils/scoreCalculator";
+import React, { useState } from "react";
+import { useAppContext } from "../context/AppContext";
+import { Tier2AssessmentSchedule } from "./Tier2AssessmentSchedule";
+// import { Tier2AssessmentInfo } from "./Tier2AssessmentInfo";
+// import { Tier2AssessmentQuestions } from "./Tier2AssessmentQuestions";
+// import { useHasTier2Access } from "../context/AppContext";
 
-interface Tier1AssessmentProps {
-  onComplete: (responses: Record<string, string>, questions: any[]) => void;
+interface Tier2AssessmentProps {
+  onNavigateToTier: (tier: "tier1" | "tier2") => void;
 }
 
-const maturityOrder = ["BASIC", "EMERGING", "ESTABLISHED", "WORLD_CLASS"];
+export function Tier2Assessment({ onNavigateToTier }: Tier2AssessmentProps) {
+  const { state } = useAppContext();
+  // const [currentStep, setCurrentStep] = useState<"info" | "questions" | "schedule">("info");
+  // const hasTier2Access = useHasTier2Access();
 
-export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
-  const { isLoading: questionsLoading, withLoading: withQuestionsLoading } =
-    useLoader();
-
-  const [questions, setQuestions] = useState<any[]>([]);
-  const [selectedResponses, setSelectedResponses] = useState<
-    Record<string, string>
-  >({});
-  const [showRecommendations, setShowRecommendations] = useState(false);
-  const { userTier1Assessments, submittingAssesment, setSubmittingAssesment } =
-    useAssessment();
-
-  // Load questions from database on component mount
-  useEffect(() => {
-    loadQuestionsFromDatabase();
-  }, []);
-
-  const loadQuestionsFromDatabase = async () => {
-    await withQuestionsLoading(async () => {
-      // Load questions for Tier 1 template
-      const result = await questionsService.getQuestionsByTemplate(
-        Tier1TemplateId
-      );
-      if (result.success && result.data) {
-        // Sort questions by order
-        const sortedQuestions = result.data.sort((a, b) => a.order - b.order);
-        setQuestions(sortedQuestions);
-      } else {
-        console.error("Failed to load questions from database:", result.error);
-        throw new Error("Failed to load assessment questions");
-      }
-    });
-  };
-  const maturityLevels =
-    questions.length > 0 && questions[0].options
-      ? maturityOrder.filter((level) =>
-          questions[0].options.some((opt: any) => opt.value === level)
-        )
-      : [];
-  const maturityLabels = maturityLevels.map((level) =>
-    level
-      .replace(/_/g, " ")
-      .toLowerCase()
-      .replace(/\b\w/g, (l) => l.toUpperCase())
-  );
-
-  const handleOptionSelect = (question: any, optionValue: string) => {
-    setSelectedResponses((prev) => ({
-      ...prev,
-      [question.id]: optionValue,
-    }));
+  const handleBackToInfo = () => {
+    onNavigateToTier("tier1");
   };
 
-  const isAllAnswered = questions.every(
-    (question) => selectedResponses[question.id] !== undefined
-  );
+  // const handleStartAssessment = () => {
+  //   setCurrentStep("questions");
+  // };
 
-  const ifDataChanged =
-    userTier1Assessments && userTier1Assessments.length > 0
-      ? JSON.stringify(selectedResponses) !==
-        JSON.stringify(JSON.parse(userTier1Assessments[0]?.responses || "{}"))
-      : true;
+  // const handleNavigateToSchedule = () => {
+  //   setCurrentStep("schedule");
+  // };
 
-  const handleSubmit = () => {
-    setSubmittingAssesment(true);
-    onComplete(selectedResponses, questions);
-  };
+  // const handleCompleteAssessment = (responses: Record<string, string>) => {
+  //   // Handle Tier 2 assessment completion
+  //   console.log("Tier 2 assessment completed:", responses);
+  // };
 
-  useEffect(() => {
-    if (userTier1Assessments && userTier1Assessments.length > 0) {
-      setSelectedResponses(
-        JSON.parse(userTier1Assessments[0]?.responses || "{}")
-      );
-    }
-  }, [userTier1Assessments]);
+  // Commented out for future use - Full Tier 2 Assessment Flow
+  // if (!hasTier2Access) {
+  //   return (
+  //     <main className="flex-1 p-8">
+  //       <div className="max-w-4xl mx-auto">
+  //         <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100 text-center">
+  //           <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+  //             <AlertCircle className="w-8 h-8 text-white" />
+  //           </div>
+  //           <h1 className="text-3xl font-bold text-gray-900 mb-4">
+  //             Access Required
+  //           </h1>
+  //           <p className="text-gray-600 text-lg mb-8">
+  //             Tier 2 assessment access has not been enabled for your organization.
+  //           </p>
+  //           <button
+  //             onClick={() => onNavigateToTier("tier1")}
+  //             className="bg-primary text-white px-8 py-4 rounded-xl font-semibold hover:opacity-90 transition-all duration-200"
+  //           >
+  //             Back to Tier 1
+  //           </button>
+  //         </div>
+  //       </div>
+  //     </main>
+  //   );
+  // }
 
-  const getSortedOptions = (question: any) => {
-    const sortedOptions = question.options.sort((a: any, b: any) => {
-      const aIndex = maturityOrder.indexOf(a.value);
-      const bIndex = maturityOrder.indexOf(b.value);
-      return aIndex - bIndex;
-    });
-    return sortedOptions;
-  };
-
-  const firstPreviousAssessment =
-    userTier1Assessments && userTier1Assessments.length > 0
-      ? userTier1Assessments[0]
-      : null;
-
-  // Show loading state while questions are being loaded
-  if (questionsLoading) {
-    return (
-      <main className="flex-1 p-8">
-        <div className="max-w-none mx-8">
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
-            <Loader text="Loading assessment questions..." size="lg" />
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  // Show error state if questions failed to load
-  if (questions.length === 0) {
-    return (
-      <main className="flex-1 p-8">
-        <div className="max-w-none mx-8">
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 text-center">
-            <div className="text-red-500 mb-4">
-              <TrendingUp className="w-12 h-12 mx-auto mb-2" />
-              <h3 className="text-lg font-semibold">
-                Failed to Load Assessment
-              </h3>
-              <p className="text-gray-600 mt-2">
-                Unable to load assessment questions from database
-              </p>
-            </div>
-            <button
-              onClick={loadQuestionsFromDatabase}
-              className="bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition-all duration-200"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className="flex-1 p-8">
-      <div className="max-w-none mx-8">
-        {/* Previous Assessment Results */}
-        {/* Previous Attempt Score Card */}
-        {!!firstPreviousAssessment && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 shadow-sm border border-blue-200 mb-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg"
-                  style={{
-                    backgroundColor: getScoreColor(
-                      JSON.parse(firstPreviousAssessment.score).overallScore
-                    ),
-                  }}
-                >
-                  {JSON.parse(firstPreviousAssessment.score).overallScore}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">
-                    Current Status:{" "}
-                    {JSON.parse(firstPreviousAssessment.score).maturityLevel}{" "}
-                    Level
-                  </h3>
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        Completed on{" "}
-                        {new Date(
-                          firstPreviousAssessment.createdAt
-                        ).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <BarChart3 className="w-4 h-4" />
-                      <span>
-                        {
-                          Object.keys(
-                            JSON.parse(firstPreviousAssessment.responses)
-                          ).length
-                        }{" "}
-                        questions answered
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recommendations Toggle Button */}
-              <button
-                onClick={() => setShowRecommendations(!showRecommendations)}
-                className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-sm"
-              >
-                <Lightbulb className="w-4 h-4 text-amber-600" />
-                <span className="text-gray-700 font-medium">
-                  {showRecommendations ? "Hide" : "Show"} Recommendations
-                </span>
-                {showRecommendations ? (
-                  <ChevronUp className="w-4 h-4 text-gray-600" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-gray-600" />
-                )}
-              </button>
-            </div>
-            <div className="mt-4 bg-white/60 rounded-lg p-3">
-              <p className="text-sm text-gray-700">
-                <strong>Your previous responses are pre-selected below.</strong>{" "}
-                You can modify any answers and resubmit to update your score.
-              </p>
-            </div>
-
-            {/* Expandable Recommendations Panel */}
-            {showRecommendations && (
-              <RecommendationsPanel
-                scoreData={JSON.parse(firstPreviousAssessment.score) as Tier1ScoreResult}
-                className="mt-4"
-                defaultExpanded={true}
-                showToggleButton={false}
-                maxRecommendations={3}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Current Assessment */}
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-black mb-4">
-              {/* {previousAssessments && previousAssessments.length > 0
-                ? "Take Assessment Again"
-                : "Albert Invent | Digital Readiness Assessment Tier 1 Assessment"} */}
-              Tier 1 Assessment
-            </h2>
-            <p className="text-black mb-6">
-              Please click the cells that apply to your organization in the area
-              below. Once you have selected all your responses, please click
-              submit to continue.
-            </p>
-
-            <div className="flex justify-end mb-6">
-              <LoadingButton
-                onClick={handleSubmit}
-                loading={submittingAssesment}
-                loadingText="Submitting..."
-                disabled={!isAllAnswered || !ifDataChanged}
-                size="md"
-              >
-                Submit Assessment
-              </LoadingButton>
-            </div>
-          </div>
-
-          {/* Assessment Grid */}
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <th className="text-left p-4 font-semibold text-gray-700 border-b">
-                    Focus Areas
-                  </th>
-                  {maturityLabels.map((level: any) => (
-                    <th
-                      key={level}
-                      className="text-center p-4 font-semibold text-gray-700 border-b min-w-48"
-                    >
-                      {level}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {questions.map((question) => (
-                  <tr key={question.id} className="border-b border-gray-100">
-                    <td className="p-4 font-medium text-gray-800 bg-gray-50 align-top">
-                      {question.prompt}
-                    </td>
-                    {getSortedOptions(question).map((option: any) => {
-                      const isSelected =
-                        selectedResponses[question.id] === option.value;
-                      return (
-                        <td
-                          key={`${question.id}_${option.label}`}
-                          className="p-2 align-top"
-                        >
-                          <div
-                            onClick={() =>
-                              handleOptionSelect(question, option.value)
-                            }
-                            className={`p-3 rounded-lg cursor-pointer transition-all duration-200 text-sm leading-tight ${
-                              isSelected
-                                ? "text-white bg-blue-500"
-                                : "text-black hover:bg-gray-100"
-                            }`}
-                          >
-                            {option.label}
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Progress indicator */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Progress: {Object.keys(selectedResponses).length} of{" "}
-              {questions.length} questions answered
-            </p>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div
-                className="bg-primary h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: `${
-                    (Object.keys(selectedResponses).length / questions.length) *
-                    100
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
+  // switch (currentStep) {
+  //   case "info":
+  //     return (
+  //       <Tier2AssessmentInfo
+  //         onStartAssessment={handleStartAssessment}
+  //         onNavigateToSchedule={handleNavigateToSchedule}
+  //       />
+  //     );
+  //   case "questions":
+  //     return (
+  //       <Tier2AssessmentQuestions
+  //         onComplete={handleCompleteAssessment}
+  //         onBack={() => setCurrentStep("info")}
+  //       />
+  //     );
+  //   case "schedule":
+  //     return (
+  //       <Tier2AssessmentSchedule onBack={() => setCurrentStep("info")} />
+  //     );
+  //   default:
+  //     return (
+  //       <Tier2AssessmentInfo
+  //         onStartAssessment={handleStartAssessment}
+  //         onNavigateToSchedule={handleNavigateToSchedule}
+  //       />
+  //     );
+  // }
+  // Always show the schedule flow for Tier 2
+  return <Tier2AssessmentSchedule onBack={handleBackToInfo} />;
 }
