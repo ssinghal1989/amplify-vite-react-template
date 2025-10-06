@@ -140,8 +140,7 @@ export function Tier2AssessmentSchedule({
 
   const getAvailableTimeSlots = (date: Date | null) => {
     if (!date) return [];
-    const unavailableSlots = ["10:00", "14:30", "15:30"];
-    return timeSlots.filter((slot) => !unavailableSlots.includes(slot.value));
+    return timeSlots;
   };
 
   const handleInputChange = (field: keyof Tier2FormData, value: string) => {
@@ -551,7 +550,10 @@ export function Tier2AssessmentSchedule({
               </label>
               <button
                 type="button"
-                onClick={() => setShowCalendar(!showCalendar)}
+                onClick={() => {
+                  setShowCalendar(!showCalendar);
+                  setShowTimeSlots(false);
+                }}
                 className={`w-full flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 text-sm sm:text-base ${
                   errors.selectedDate
                     ? "border-red-300 focus:ring-red-500"
@@ -674,11 +676,6 @@ export function Tier2AssessmentSchedule({
             width: 100%;
             border: none;
             font-family: inherit;
-          }
-          
-          .react-calendar-custom .react-calendar__tile {
-            border-radius: 8px;
-            margin: 1px;
           }
           
           .react-calendar-custom .react-calendar__tile--active {
