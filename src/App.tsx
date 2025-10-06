@@ -50,22 +50,19 @@ function AppContent() {
 
   const checkIfUserAlreadyLoggedIn = async () => {
     try {
+      
       dispatch({ type: "SET_IS_LOADING_INITIAL_DATA", payload: true });
       const currentUser = await getCurrentUser();
       if (currentUser) {
-          userId: currentUser.userId,
-          username: currentUser.username
-        });
         dispatch({ type: "SET_LOGGED_IN_USER_DETAILS", payload: currentUser });
         const result = await setUserData({ loggedInUserDetails: currentUser! });
-          userId: result.user?.id,
-          companyId: result.company?.id
-        });
         
         // Try to link any anonymous assessments after user login
         if (result.user && result.company) {
+          
           try {
             const linkedAssessments = await findAndLinkAnonymousAssessments(result.user.id, result.company.id);
+            console.log("✅ [checkIfUserAlreadyLoggedIn] Anonymous assessments linking completed", {
               linkedCount: linkedAssessments.length
             });
           } catch (err) {
@@ -73,6 +70,7 @@ function AppContent() {
           }
         }
       } else {
+        
       }
       dispatch({ type: "SET_IS_LOADING_INITIAL_DATA", payload: false });
     } catch (error) {
@@ -89,7 +87,7 @@ function AppContent() {
     if (state?.userData?.id) {
       await client.models.User.update({
         id: state.userData.id,
-        role: 'admin',
+        role: 'superAdmin',
       })
     }
   }
@@ -97,7 +95,7 @@ function AppContent() {
   useEffect(() => {
     checkIfUserAlreadyLoggedIn();
     // checkAndSetupQuestions();
-    // updateUserRole();
+    //updateUserRole();
     
     // Initialize device fingerprint
     const deviceFingerprint = getDeviceFingerprint();
@@ -165,6 +163,7 @@ function AppContent() {
     user?: LocalSchema["User"]["type"];
     company?: LocalSchema["Company"]["type"];
   }) => {
+    console.log("🔐 [handleLoginOtpVerification] Processing OTP verification", {
       hasUser: !!data.user,
       hasCompany: !!data.company,
       userId: data.user?.id,
@@ -176,10 +175,9 @@ function AppContent() {
     
     // Try to link anonymous assessments after successful login
     if (user && company) {
+      
       try {
         const linkedAssessments = await findAndLinkAnonymousAssessments(user.id, company.id);
-          linkedCount: linkedAssessments.length
-        });
       } catch (err) {
         console.error("❌ [handleLoginOtpVerification] Error linking anonymous assessments:", err);
       }
@@ -250,6 +248,7 @@ function AppContent() {
     responses: Record<string, string>,
     questions: any[]
   ) => {
+    console.log("🎯 [handleTier1Complete] Processing Tier 1 assessment completion", {
       responseCount: Object.keys(responses).length,
       questionCount: questions.length,
       hasCompleteProfile,
@@ -257,6 +256,7 @@ function AppContent() {
     });
     
     const score = calculateTier1Score(responses, questions);
+    console.log("📊 [handleTier1Complete] Calculated assessment score", {
       overallScore: score.overallScore,
       maturityLevel: score.maturityLevel,
       totalQuestions: score.totalQuestions
@@ -269,6 +269,7 @@ function AppContent() {
     });
     
     // Always submit assessment (anonymous if not logged in)
+    console.log("💾 [handleTier1Complete] Submitting assessment", {
       isAnonymous: !hasCompleteProfile
     });
     await submitTier1Assessment({
@@ -277,7 +278,9 @@ function AppContent() {
       isAnonymous: !hasCompleteProfile,
     });
     
+    
     // Always show results immediately
+    
     navigate("/tier1-results");
   };
 

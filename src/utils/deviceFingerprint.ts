@@ -147,16 +147,15 @@ export function getStoredDeviceFingerprint(): DeviceFingerprint | null {
 
 // Get or generate device fingerprint
 export function getDeviceFingerprint(): DeviceFingerprint {
+  
   const stored = getStoredDeviceFingerprint();
   if (stored) {
-      deviceId: stored.fingerprint,
-      userAgent: stored.userAgent.substring(0, 50) + "...",
-      screenResolution: stored.screenResolution
-    });
     return stored;
   }
   
+  
   const fingerprint = generateDeviceFingerprint();
+  console.log("📱 [getDeviceFingerprint] Generated fingerprint", {
     deviceId: fingerprint.fingerprint,
     userAgent: fingerprint.userAgent.substring(0, 50) + "...",
     screenResolution: fingerprint.screenResolution,
@@ -165,6 +164,7 @@ export function getDeviceFingerprint(): DeviceFingerprint {
     platform: fingerprint.platform
   });
   storeDeviceFingerprint(fingerprint);
+  
   return fingerprint;
 }
 

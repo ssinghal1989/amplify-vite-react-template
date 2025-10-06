@@ -380,7 +380,7 @@ export function CombinedScheduleForm({
                     <Calendar
                       onChange={handleDateSelect}
                       value={formData.selectedDate}
-                      minDate={new Date()}
+                      minDate={new Date(Date.now() + 60 * 24 * 60 * 7 * 1000)}
                       maxDate={
                         new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
                       }

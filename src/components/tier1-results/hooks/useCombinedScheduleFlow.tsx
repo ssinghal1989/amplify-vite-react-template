@@ -11,19 +11,11 @@ import { LocalSchema } from "../../../amplifyClient";
 
 export function useCombinedScheduleFlow(score: any) {
   
+  
   const [showCombinedForm, setShowCombinedForm] = useState(false);
   const [showCombinedOtp, setShowCombinedOtp] = useState(false);
   const [combinedFormData, setCombinedFormData] = useState<CombinedScheduleData | null>(null);
   const [isAuthInProgress, setIsAuthInProgress] = useState(false);
-
-  // Log state changes
-  useEffect(() => {
-      showCombinedForm,
-      showCombinedOtp,
-      hasCombinedFormData: !!combinedFormData,
-      isAuthInProgress
-    });
-  }, [showCombinedForm, showCombinedOtp, combinedFormData, isAuthInProgress]);
 
   const { showToast } = useToast();
   const { state, dispatch } = useAppContext();
@@ -36,34 +28,38 @@ export function useCombinedScheduleFlow(score: any) {
 
   const updateStateAndNavigateToOtp = (nextStep: LOGIN_NEXT_STEP) => {
     
+    
+    
     dispatch({ type: "LOGIN_NEXT_STEP", payload: nextStep });
+    
     
     // Set OTP screen to show and hide form
     setTimeout(() => {
+      
       setShowCombinedForm(false);
+      
       setShowCombinedOtp(true);
+      
       setIsAuthInProgress(false);
+      
     }, 100);
   };
 
   const { handleAuth } = useAuthFlow(updateStateAndNavigateToOtp);
 
   const handleCombinedFormSubmit = async (data: CombinedScheduleData) => {
-      email: data.email,
-      name: data.name,
-      selectedDate: data.selectedDate,
-      selectedTimesCount: data.selectedTimes.length,
-      isAuthInProgress
-    });
     
     try {
       // Prevent multiple submissions
       if (isAuthInProgress) {
+        
         return;
       }
 
       // Validate email domain
+      
       if (!ifDomainAlloeded(getDomainFromEmail(data.email)!)) {
+        
         showToast({
           type: "error",
           title: "Invalid Email",
@@ -72,19 +68,28 @@ export function useCombinedScheduleFlow(score: any) {
         });
         return;
       }
+      
+
       // Store the form data for later use
+      
       setCombinedFormData(data);
 
       // Trigger auth flow directly
+      
       setIsAuthInProgress(true);
+      
       
       try {
         dispatch({ type: "SET_LOGIN_EMAIL", payload: data.email });
+        
+        
         await handleAuth(data.email);
+        
       } catch (error) {
         console.error("❌ [handleCombinedFormSubmit] Error in auth flow:", error);
         setIsAuthInProgress(false);
         setCombinedFormData(null);
+        
         showToast({
           type: "error",
           title: "Authentication Error",
@@ -96,6 +101,7 @@ export function useCombinedScheduleFlow(score: any) {
       console.error("❌ [handleCombinedFormSubmit] Error during combined form submission:", error);
       setIsAuthInProgress(false);
       setCombinedFormData(null);
+      
       showToast({
         type: "error",
         title: "Error",
@@ -109,13 +115,10 @@ export function useCombinedScheduleFlow(score: any) {
     user?: LocalSchema["User"]["type"];
     company?: LocalSchema["Company"]["type"];
   }) => {
-      hasUser: !!data.user,
-      hasCompany: !!data.company,
-      hasCombinedFormData: !!combinedFormData
-    });
     
     try {
       if (!combinedFormData) {
+        
         showToast({
           type: "error",
           title: "Error",
@@ -128,9 +131,6 @@ export function useCombinedScheduleFlow(score: any) {
       const { user, company } = data;
 
       if (!user || !company) {
-          hasUser: !!user,
-          hasCompany: !!company
-        });
         showToast({
           type: "error",
           title: "Error",
@@ -139,16 +139,10 @@ export function useCombinedScheduleFlow(score: any) {
         });
         return;
       }
-
-      // CRITICAL: Link the current anonymous assessment with the new user
-        userId: user.id,
-        companyId: company.id,
-        hasAnonymousAssessmentId: !!state.anonymousAssessmentId
-      });
-      
       let linkedAssessmentId = null;
       
       if (state.anonymousAssessmentId) {
+        
         try {
           const linkedAssessment = await linkAnonymousAssessment(
             state.anonymousAssessmentId,
@@ -156,26 +150,22 @@ export function useCombinedScheduleFlow(score: any) {
             company.id
           );
           linkedAssessmentId = linkedAssessment?.id;
+          
         } catch (linkError) {
           console.error("❌ [handleCombinedOtpVerification] Error linking specific anonymous assessment:", linkError);
         }
       } else {
+        
         try {
           const linkedAssessments = await findAndLinkAnonymousAssessments(user.id, company.id);
           if (linkedAssessments.length > 0) {
             linkedAssessmentId = linkedAssessments[0].id;
+            
           }
         } catch (linkError) {
           console.error("❌ [handleCombinedOtpVerification] Error linking assessments via device fingerprint:", linkError);
         }
       }
-
-        userId: user.id,
-        companyId: company.id,
-        preferredDate: combinedFormData.selectedDate,
-        timesCount: combinedFormData.selectedTimes.length,
-        linkedAssessmentId
-      });
       
       // Create the schedule request with the combined form data
       const { data: result } = await scheduleRequest({
@@ -200,17 +190,15 @@ export function useCombinedScheduleFlow(score: any) {
           linkedAssessmentId: linkedAssessmentId
         }),
       });
-
-        success: !!result,
-        resultId: result?.id
-      });
       
       // Close the OTP modal
+      
       setShowCombinedOtp(false);
       setCombinedFormData(null);
       setIsAuthInProgress(false);
 
       if (result) {
+        
         showToast({
           type: "success",
           title: "Success!",
@@ -219,6 +207,7 @@ export function useCombinedScheduleFlow(score: any) {
           duration: 6000,
         });
       } else {
+        
         showToast({
           type: "warning",
           title: "Partial Success",
@@ -244,26 +233,27 @@ export function useCombinedScheduleFlow(score: any) {
   };
 
   const handleScheduleClick = () => {
+    
     setShowCombinedForm(true);
+    
   };
 
   const handleCancelCombinedForm = () => {
+    
     setShowCombinedForm(false);
     setCombinedFormData(null);
     setIsAuthInProgress(false);
+    
   };
 
   const handleCancelCombinedOtp = () => {
+    
     setShowCombinedOtp(false);
     setCombinedFormData(null);
     setIsAuthInProgress(false);
     setShowCombinedForm(true); // Go back to form
+    
   };
-
-    showCombinedForm,
-    showCombinedOtp,
-    hasCombinedFormData: !!combinedFormData
-  });
   
   return {
     showCombinedForm,
