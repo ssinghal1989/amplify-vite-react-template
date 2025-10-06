@@ -71,7 +71,7 @@ export function RecommendationsPanel({
 
           <div className="space-y-3">
             {/* Priority Recommendation */}
-            {recommendations.length > 0 && (
+            {recommendations.length > 0 && recommendations.some(item => item.isPriority) && (
               <div
                 className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border-l-4"
                 style={{ 
@@ -109,7 +109,7 @@ export function RecommendationsPanel({
                   {(() => {
                     const maturityOrder = ['BASIC', 'EMERGING', 'ESTABLISHED', 'WORLD_CLASS'];
                     const sortedRecommendations = recommendations
-                      .slice(1)
+                      .filter(item => !item.isPriority)
                       .sort((a, b) => {
                         const aIndex = a.maturityLevel ? maturityOrder.indexOf(a.maturityLevel) : 999;
                         const bIndex = b.maturityLevel ? maturityOrder.indexOf(b.maturityLevel) : 999;

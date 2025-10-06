@@ -336,7 +336,7 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
                   return (
                     <div className="space-y-3">
                       {/* Priority Recommendation */}
-                      {recommendations.length > 0 && (
+                      {recommendations.length > 0 && recommendations.some(item => item.isPriority) && (
                         <div
                           className="bg-gradient-to-r  rounded-lg p-4 border-l-4"
                           style={{ borderColor: "#05f" }}
@@ -374,7 +374,7 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
                           </h5>
                           <div className="grid gap-2 sm:gap-3">
                             {recommendations
-                              .splice(1, 10)
+                              .filter(item => !item.isPriority)
                               .sort((a, b) => {
                                 const aIndex = a.maturityLevel
                                   ? maturityOrder.indexOf(a.maturityLevel)
