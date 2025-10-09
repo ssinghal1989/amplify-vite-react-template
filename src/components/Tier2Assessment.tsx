@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAppContext } from "../context/AppContext";
 import { Tier2AssessmentSchedule } from "./Tier2AssessmentSchedule";
+import { useNavigate } from "react-router-dom";
 // import { Tier2AssessmentInfo } from "./Tier2AssessmentInfo";
 // import { Tier2AssessmentQuestions } from "./Tier2AssessmentQuestions";
 // import { useHasTier2Access } from "../context/AppContext";
@@ -11,11 +12,12 @@ interface Tier2AssessmentProps {
 
 export function Tier2Assessment({ onNavigateToTier }: Tier2AssessmentProps) {
   const { state } = useAppContext();
+  const navigate = useNavigate();
   // const [currentStep, setCurrentStep] = useState<"info" | "questions" | "schedule">("info");
   // const hasTier2Access = useHasTier2Access();
 
   const handleBackToInfo = () => {
-    onNavigateToTier("tier1");
+    navigate(-1)
   };
 
   // const handleStartAssessment = () => {

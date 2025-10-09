@@ -514,16 +514,16 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
               Please answer all questions to complete your assessment.
             </p>
 
-            <div className="hidden lg:flex lg:justify-between lg:items-center lg:space-x-4 mb-6">
+            <div className="hidden lg:flex lg:justify-end lg:items-center lg:space-x-4 mb-6">
               {/* Request In-Depth Assessment Button - only show if user has completed assessment */}
-              <LoadingButton
+              {/* <LoadingButton
                 onClick={handleRequestTier2}
                 loading={false}
                 loadingText="Submitting..."
                 className="text-base px-4 py-3"
               >
                 Request In-Depth Assessment
-              </LoadingButton>
+              </LoadingButton> */}
 
               <LoadingButton
                 onClick={handleSubmit}
@@ -613,7 +613,7 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
 
             {/* Submit Buttons - After all questions on mobile */}
             <div className="mt-6 space-y-3">
-              <LoadingButton
+              {/* <LoadingButton
                 onClick={handleRequestTier2}
                 loading={false}
                 loadingText="Submitting..."
@@ -621,7 +621,7 @@ export function Tier1Assessment({ onComplete }: Tier1AssessmentProps) {
                 className="w-full text-sm py-3"
               >
                 Request In-Depth Assessment
-              </LoadingButton>
+              </LoadingButton> */}
               <LoadingButton
                 onClick={handleSubmit}
                 loading={submittingAssesment}
