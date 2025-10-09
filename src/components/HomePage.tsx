@@ -15,17 +15,17 @@ export function HomePage({ onNavigateToTier }: HomePageProps) {
           </p>
           
           {/* Blog Post Link */}
-          {/* <div className="mt-4 sm:mt-6">
+          <div className="mt-4 sm:mt-6">
             <a
-              href="https://www.albertinvent.com/resources/digital-readiness-assessment"
+              href="https://hubs.li/Q03MBT0r0"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center space-x-2 text-primary hover:text-blue-700 font-medium text-sm sm:text-base transition-colors duration-200 group"
             >
-              <span>Learn more about the Digital Readiness Assessment</span>
+              <span>To learn more about the assessment, please read our blog.</span>
               <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
             </a>
-          </div> */}
+          </div>
         </div>
 
         {/* Assessment Cards */}

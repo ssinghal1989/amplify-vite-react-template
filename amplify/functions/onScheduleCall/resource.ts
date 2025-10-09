@@ -5,6 +5,6 @@ export const onScheduleCallFunction = defineFunction({
   entry: './handler.ts',
   environment: {
     'SOURCE_EMAIL' : 'schedule@albertinvent.com',
-    'DESTINATION_EMAIL': 'adam.pashley@albertinvent.com, Jon@albertinvent.com, roger@albertinvent.com, carol@albertinvent.com, sonu@albertinvent.com',
+    'DESTINATION_EMAIL': 'adam.pashley@albertinvent.com, zoe@albertinvent.com, Jon@albertinvent.com, roger@albertinvent.com, carol@albertinvent.com, sonu@albertinvent.com',
   }
 });
