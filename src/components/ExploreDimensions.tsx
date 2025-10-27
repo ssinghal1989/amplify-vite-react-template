@@ -1,12 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, Info } from 'lucide-react';
-import { dimensionsData, Pillar, Dimension, SubDimension } from '../data/dimensionsData';
+import { Pillar, Dimension, SubDimension } from '../data/dimensionsData';
+import { fetchAllDimensions } from '../services/dimensionsService';
+import { seedDimensionsData, checkDimensionsDataExists } from '../services/dimensionsSeedService';
 
 export function ExploreDimensions() {
-  const [selectedPillar, setSelectedPillar] = useState<string>(dimensionsData[0].name);
+  const [dimensionsData, setDimensionsData] = useState<Pillar[]>([]);
+  const [selectedPillar, setSelectedPillar] = useState<string>('');
   const [selectedDimension, setSelectedDimension] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadDimensions();
+  }, []);
+
+  async function loadDimensions() {
+    try {
+      setLoading(true);
+      setError(null);
+
+      let data = await fetchAllDimensions();
+
+      if (data.length === 0) {
+        console.log('No dimensions data found, seeding...');
+        await seedDimensionsData();
+        data = await fetchAllDimensions();
+      }
+
+      setDimensionsData(data);
+
+      if (data.length > 0) {
+        setSelectedPillar(data[0].name);
+      }
+    } catch (err) {
+      console.error('Error loading dimensions:', err);
+      setError('Failed to load dimensions data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const currentPillar = dimensionsData.find(p => p.name === selectedPillar);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading dimensions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-4">
+            <p className="text-red-800">{error}</p>
+          </div>
+          <button
+            onClick={loadDimensions}
+            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (dimensionsData.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 text-lg">No dimensions data available.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
