@@ -4,6 +4,7 @@ import { useAppContext } from "../context/AppContext"; // adjust path
 import { Tier1TemplateId, Tier2TemplateId } from "../services/defaultQuestions";
 import { Tier1ScoreResult } from "../utils/scoreCalculator";
 import { getDeviceFingerprint } from "../utils/deviceFingerprint";
+import {Question} from "../utils/tier2ScoreCalculator";
 
 type Tier1AssessmentRequest = {
   user?: LocalSchema["User"]["type"];
@@ -140,19 +141,10 @@ export function useAssessment() {
           deviceId: deviceFingerprint?.fingerprint,
           timestamp: new Date().toISOString(),
         });
-        console.log("📱 [submitTier1Assessment] Added anonymous metadata", {
-          deviceId: deviceFingerprint?.fingerprint,
-          metadataSize: JSON.stringify(assessmentData.metadata).length
-        });
       }
 
       
       const { data } = await client.models.AssessmentInstance.create(assessmentData, {authMode: 'apiKey'});
-      console.log("✅ [submitTier1Assessment] Assessment instance created", {
-        assessmentId: data?.id,
-        templateId: data?.templateId,
-        assessmentType: data?.assessmentType
-      });
       
       // Create tracking record for anonymous assessments
       if (isAnonymous && data && deviceFingerprint) {
@@ -223,11 +215,6 @@ export function useAssessment() {
       
       try {
         const deviceFingerprint = getDeviceFingerprint();
-        console.log("📱 [findAndLinkAnonymousAssessments] Got device fingerprint", {
-          deviceId: deviceFingerprint.fingerprint,
-          userAgent: deviceFingerprint.userAgent.substring(0, 50) + "...",
-          screenResolution: deviceFingerprint.screenResolution
-        });
         
         // Efficiently search for anonymous assessments by deviceId
         
@@ -248,10 +235,6 @@ export function useAssessment() {
         
         const linkedAssessments = [];
         for (const anonymousAssessment of anonymousAssessments) {
-          console.log("🔄 [findAndLinkAnonymousAssessments] Processing assessment", {
-            trackingId: anonymousAssessment.id,
-            assessmentInstanceId: anonymousAssessment.assessmentInstanceId
-          });
           
           try {
             // Update the actual assessment instance
@@ -266,11 +249,6 @@ export function useAssessment() {
                 originalDeviceId: deviceFingerprint.fingerprint,
               }),
             });
-            console.log("✅ [findAndLinkAnonymousAssessments] Assessment instance updated", {
-              assessmentId: updatedAssessment?.id,
-              newInitiatorUserId: updatedAssessment?.initiatorUserId,
-              newCompanyId: updatedAssessment?.companyId
-            });
             
             // Update the tracking record
             
@@ -282,11 +260,6 @@ export function useAssessment() {
               linkedAt: new Date().toISOString(),
             }, {
               authMode: 'apiKey'
-            });
-            console.log("✅ [findAndLinkAnonymousAssessments] Tracking record updated", {
-              trackingId: anonymousAssessment.id,
-              isLinked: true,
-              linkedUserId: userId
             });
             
             const linked = updatedAssessment;
@@ -304,12 +277,6 @@ export function useAssessment() {
           dispatch({ type: "SET_ANONYMOUS_ASSESSMENT_ID", payload: null });
           
         }
-
-        console.log("🎉 [findAndLinkAnonymousAssessments] Linking process completed", {
-          totalProcessed: anonymousAssessments.length,
-          successfullyLinked: linkedAssessments.length,
-          linkedAssessmentIds: linkedAssessments.map(a => a.id)
-        });
         return linkedAssessments;
       } catch (err) {
         console.error("❌ [findAndLinkAnonymousAssessments] Error finding and linking anonymous assessments:", err);
@@ -327,24 +294,39 @@ export function useAssessment() {
         setSubmittingAssesment(false);
         return;
       }
-      
-      // Create a new assessment instance for user
+
+      // Get questions to calculate score
+      const { questionsService } = await import('../services/questionsService');
+      const questionsResult = await questionsService.getQuestionsByTemplate(Tier2TemplateId);
+
+      if (!questionsResult.success || !questionsResult.data) {
+        throw new Error("Failed to load questions for score calculation");
+      }
+
+      // Calculate Tier 2 score
+      const { calculateTier2Score } = await import('../utils/tier2ScoreCalculator');
+      const tier2Score = calculateTier2Score(responses, questionsResult.data as Question[]);
+
+      // Create a new assessment instance for user with calculated score
       const assessmentData = {
         templateId: Tier2TemplateId,
         companyId: state.userData?.companyId,
         initiatorUserId: state?.userData?.id,
         assessmentType: "TIER2" as "TIER2",
         responses: JSON.stringify(responses),
+        score: JSON.stringify(tier2Score),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      
-      await client.models.AssessmentInstance.create(assessmentData, {authMode: 'apiKey'});
+
+      const { data } = await client.models.AssessmentInstance.create(assessmentData, {authMode: 'apiKey'});
       await fetchUserAssessments();
       setSubmittingAssesment(false);
+      return data;
     } catch (err) {
       setSubmittingAssesment(false);
       console.error("Error in submitting Tier 2 assessment:", err);
+      throw err;
     }
   };
   const updateTier1AssessmentResponse = useCallback(
